@@ -1,8 +1,9 @@
-APP_NAME = CRTImperator
+EXE_NAME = CRTImperator
 BUILD_DIR = build
-APP_BUNDLE = $(BUILD_DIR)/$(APP_NAME).app
+APP_BUNDLE = $(BUILD_DIR)/CRT Imperator.app
 CONTENTS = $(APP_BUNDLE)/Contents
 MACOS = $(CONTENTS)/MacOS
+RESOURCES = $(CONTENTS)/Resources
 
 SWIFT_FILES = Sources/main.swift \
               Sources/AppDelegate.swift \
@@ -13,41 +14,25 @@ SWIFT_FILES = Sources/main.swift \
 
 .PHONY: build run clean
 
-RESOURCES = $(CONTENTS)/Resources
-
-build: $(MACOS)/$(APP_NAME) $(CONTENTS)/Info.plist $(RESOURCES)/icon.icns $(RESOURCES)/menubar-icon.png $(RESOURCES)/menubar-icon@2x.png
-	@codesign --force --deep --sign - $(APP_BUNDLE)
-	@echo "Build complete: $(APP_BUNDLE)"
-
-$(MACOS)/$(APP_NAME): $(SWIFT_FILES)
-	@mkdir -p $(MACOS)
+build: $(SWIFT_FILES) Info.plist icon.icns menubar-icon.png menubar-icon@2x.png
+	@mkdir -p "$(MACOS)" "$(RESOURCES)"
 	swiftc $(SWIFT_FILES) \
-		-o $@ \
+		-o "$(MACOS)/$(EXE_NAME)" \
 		-framework AppKit \
 		-framework Metal \
 		-framework MetalKit \
 		-framework QuartzCore \
 		-suppress-warnings \
 		-O
-
-$(CONTENTS)/Info.plist: Info.plist
-	@mkdir -p $(CONTENTS)
-	cp Info.plist $@
-
-$(RESOURCES)/icon.icns: icon.icns
-	@mkdir -p $(RESOURCES)
-	cp icon.icns $@
-
-$(RESOURCES)/menubar-icon.png: menubar-icon.png
-	@mkdir -p $(RESOURCES)
-	cp menubar-icon.png $@
-
-$(RESOURCES)/menubar-icon@2x.png: menubar-icon@2x.png
-	@mkdir -p $(RESOURCES)
-	cp menubar-icon@2x.png $@
+	cp Info.plist "$(CONTENTS)/Info.plist"
+	cp icon.icns "$(RESOURCES)/icon.icns"
+	cp menubar-icon.png "$(RESOURCES)/menubar-icon.png"
+	cp "menubar-icon@2x.png" "$(RESOURCES)/menubar-icon@2x.png"
+	@codesign --force --deep --sign - "$(APP_BUNDLE)"
+	@echo "Build complete: $(APP_BUNDLE)"
 
 run: build
-	@open $(APP_BUNDLE)
+	@open "$(APP_BUNDLE)"
 
 clean:
 	rm -rf $(BUILD_DIR)
