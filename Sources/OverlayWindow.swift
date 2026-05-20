@@ -11,7 +11,7 @@ class OverlayWindow: NSWindow {
             backing: .buffered,
             defer: false
         )
-        self.level = .screenSaver
+        self.level = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()) + 1)
         self.isOpaque = false
         self.backgroundColor = .clear
         self.ignoresMouseEvents = true
