@@ -30,6 +30,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self, selector: #selector(screensChanged),
             name: NSApplication.didChangeScreenParametersNotification, object: nil
         )
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self, selector: #selector(spaceChanged),
+            name: NSWorkspace.activeSpaceDidChangeNotification, object: nil
+        )
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -70,5 +74,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func screensChanged() {
         setupOverlays()
+    }
+
+    @objc private func spaceChanged() {
+        bringOverlaysToFront()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.bringOverlaysToFront()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.bringOverlaysToFront()
+        }
+    }
+
+    private func bringOverlaysToFront() {
+        let settings = CRTSettings.shared
+        for window in overlayWindows {
+            if settings.isActive && settings.isScreenEnabled(window.displayID) {
+                window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.maximumWindow)))
+                window.orderFrontRegardless()
+            }
+        }
     }
 }
