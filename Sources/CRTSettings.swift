@@ -253,7 +253,7 @@ class CRTSettings {
             return
         }
         isBatchUpdate = true
-        isActive = d.bool(forKey: "crt.isActive")
+        isActive = true
         scanlineIntensity = d.float(forKey: "crt.scanlineIntensity")
         vignetteIntensity = d.float(forKey: "crt.vignetteIntensity")
         flickerAmount = d.float(forKey: "crt.flickerAmount")

@@ -5,13 +5,15 @@
     <key>CFBundleIdentifier</key>
     <string>com.crt.overlay</string>
     <key>CFBundleName</key>
-    <string>CRT Overlay</string>
+    <string>CRT Imperator</string>
     <key>CFBundleExecutable</key>
-    <string>CRTOverlay</string>
+    <string>CRTImperator</string>
     <key>CFBundleVersion</key>
     <string>1.0</string>
     <key>CFBundleShortVersionString</key>
     <string>1.0</string>
+    <key>CFBundleIconFile</key>
+    <string>icon</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>LSUIElement</key>

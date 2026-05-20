@@ -118,7 +118,14 @@ class StatusBarController: NSObject {
         super.init()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "tv", accessibilityDescription: "CRT Overlay")
+            if let iconPath = Bundle.main.pathForImageResource("menubar-icon") {
+                let img = NSImage(byReferencingFile: iconPath)!
+                img.isTemplate = true
+                img.size = NSSize(width: 18, height: 18)
+                button.image = img
+            } else {
+                button.image = NSImage(systemSymbolName: "tv", accessibilityDescription: "CRT Imperator")
+            }
         }
         menu = NSMenu()
         menu.autoenablesItems = false
@@ -179,7 +186,7 @@ class StatusBarController: NSObject {
         menu.addItem(presetItem)
         menu.addItem(.separator())
 
-        let quitItem = NSMenuItem(title: "Quit CRT Overlay", action: #selector(quitApp), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "Quit CRT Imperator", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
     }

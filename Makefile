@@ -1,4 +1,4 @@
-APP_NAME = CRTOverlay
+APP_NAME = CRTImperator
 BUILD_DIR = build
 APP_BUNDLE = $(BUILD_DIR)/$(APP_NAME).app
 CONTENTS = $(APP_BUNDLE)/Contents
@@ -13,7 +13,9 @@ SWIFT_FILES = Sources/main.swift \
 
 .PHONY: build run clean
 
-build: $(MACOS)/$(APP_NAME) $(CONTENTS)/Info.plist
+RESOURCES = $(CONTENTS)/Resources
+
+build: $(MACOS)/$(APP_NAME) $(CONTENTS)/Info.plist $(RESOURCES)/icon.icns $(RESOURCES)/menubar-icon.png $(RESOURCES)/menubar-icon@2x.png
 	@codesign --force --deep --sign - $(APP_BUNDLE)
 	@echo "Build complete: $(APP_BUNDLE)"
 
@@ -31,6 +33,18 @@ $(MACOS)/$(APP_NAME): $(SWIFT_FILES)
 $(CONTENTS)/Info.plist: Info.plist
 	@mkdir -p $(CONTENTS)
 	cp Info.plist $@
+
+$(RESOURCES)/icon.icns: icon.icns
+	@mkdir -p $(RESOURCES)
+	cp icon.icns $@
+
+$(RESOURCES)/menubar-icon.png: menubar-icon.png
+	@mkdir -p $(RESOURCES)
+	cp menubar-icon.png $@
+
+$(RESOURCES)/menubar-icon@2x.png: menubar-icon@2x.png
+	@mkdir -p $(RESOURCES)
+	cp menubar-icon@2x.png $@
 
 run: build
 	@open $(APP_BUNDLE)
