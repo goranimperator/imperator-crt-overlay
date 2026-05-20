@@ -1,5 +1,56 @@
 import AppKit
 
+class PillToggleView: NSView {
+    var isOn: Bool { didSet { needsDisplay = true } }
+    var onToggle: ((Bool) -> Void)?
+
+    private let trackWidth: CGFloat = 38
+    private let trackHeight: CGFloat = 22
+    private let knobInset: CGFloat = 2
+
+    init(isOn: Bool) {
+        self.isOn = isOn
+        super.init(frame: NSRect(x: 0, y: 0, width: 260, height: 28))
+
+        let label = NSTextField(labelWithString: "Overlay Active")
+        label.font = .systemFont(ofSize: 13)
+        label.frame = NSRect(x: 20, y: 4, width: 120, height: 20)
+        addSubview(label)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
+
+        let x: CGFloat = bounds.width - trackWidth - 16
+        let y: CGFloat = (bounds.height - trackHeight) / 2
+        let trackRect = CGRect(x: x, y: y, width: trackWidth, height: trackHeight)
+        let radius = trackHeight / 2
+
+        let trackColor = isOn ? NSColor.systemBlue : NSColor.systemGray
+        ctx.setFillColor(trackColor.cgColor)
+        ctx.addPath(CGPath(roundedRect: trackRect, cornerWidth: radius, cornerHeight: radius, transform: nil))
+        ctx.fillPath()
+
+        let knobSize = trackHeight - knobInset * 2
+        let knobX = isOn ? x + trackWidth - knobSize - knobInset : x + knobInset
+        let knobY = y + knobInset
+        let knobRect = CGRect(x: knobX, y: knobY, width: knobSize, height: knobSize)
+
+        ctx.setShadow(offset: CGSize(width: 0, height: -1), blur: 2, color: CGColor(gray: 0, alpha: 0.2))
+        ctx.setFillColor(CGColor.white)
+        ctx.addPath(CGPath(roundedRect: knobRect, cornerWidth: knobSize / 2, cornerHeight: knobSize / 2, transform: nil))
+        ctx.fillPath()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        isOn.toggle()
+        onToggle?(isOn)
+    }
+}
+
 class SliderMenuItemView: NSView {
     private let titleLabel = NSTextField(labelWithString: "")
     private let slider = NSSlider()
@@ -48,7 +99,7 @@ class SliderMenuItemView: NSView {
 class StatusBarController: NSObject {
     private var statusItem: NSStatusItem!
     private var menu: NSMenu!
-    private var toggleItem: NSMenuItem!
+    private var pillToggle: PillToggleView!
     private var scanlineSlider: SliderMenuItemView!
     private var vignetteSlider: SliderMenuItemView!
     private var flickerSlider: SliderMenuItemView!
@@ -90,10 +141,13 @@ class StatusBarController: NSObject {
     private func buildMenu() {
         let s = CRTSettings.shared
 
-        toggleItem = NSMenuItem(title: "Overlay Active", action: #selector(toggleOverlay), keyEquivalent: "")
-        toggleItem.target = self
-        toggleItem.state = s.isActive ? .on : .off
-        menu.addItem(toggleItem)
+        pillToggle = PillToggleView(isOn: s.isActive)
+        pillToggle.onToggle = { [weak self] on in
+            CRTSettings.shared.isActive = on
+        }
+        let toggleMenuItem = NSMenuItem()
+        toggleMenuItem.view = pillToggle
+        menu.addItem(toggleMenuItem)
         menu.addItem(.separator())
 
         screensMenu = NSMenu()
@@ -198,7 +252,7 @@ class StatusBarController: NSObject {
 
     @objc private func toggleOverlay() {
         CRTSettings.shared.isActive.toggle()
-        toggleItem.state = CRTSettings.shared.isActive ? .on : .off
+        pillToggle.isOn = CRTSettings.shared.isActive
     }
 
     @objc private func toggleScreen(_ sender: NSMenuItem) {
@@ -254,7 +308,7 @@ class StatusBarController: NSObject {
 
     @objc private func settingsDidChange() {
         let s = CRTSettings.shared
-        toggleItem.state = s.isActive ? .on : .off
+        pillToggle.isOn = s.isActive
         scanlineSlider.setValue(s.scanlineIntensity)
         vignetteSlider.setValue(s.vignetteIntensity)
         flickerSlider.setValue(s.flickerAmount)

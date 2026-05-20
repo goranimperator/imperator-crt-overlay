@@ -22,6 +22,47 @@ struct PresetData: Codable {
     var tintG: Float
     var tintB: Float
     var tintStrength: Float
+
+    init(name: String, scanlineIntensity: Float, vignetteIntensity: Float,
+         flickerAmount: Float, noiseAmount: Float, curvatureAmount: Float,
+         rgbDarkness: Float, rgbColor: Float, vhsAmount: Float,
+         staticJump: Float = 0.0, sizeScale: Float,
+         tintR: Float, tintG: Float, tintB: Float, tintStrength: Float) {
+        self.name = name
+        self.scanlineIntensity = scanlineIntensity
+        self.vignetteIntensity = vignetteIntensity
+        self.flickerAmount = flickerAmount
+        self.noiseAmount = noiseAmount
+        self.curvatureAmount = curvatureAmount
+        self.rgbDarkness = rgbDarkness
+        self.rgbColor = rgbColor
+        self.vhsAmount = vhsAmount
+        self.staticJump = staticJump
+        self.sizeScale = sizeScale
+        self.tintR = tintR
+        self.tintG = tintG
+        self.tintB = tintB
+        self.tintStrength = tintStrength
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        name = try c.decode(String.self, forKey: .name)
+        scanlineIntensity = try c.decode(Float.self, forKey: .scanlineIntensity)
+        vignetteIntensity = try c.decode(Float.self, forKey: .vignetteIntensity)
+        flickerAmount = try c.decode(Float.self, forKey: .flickerAmount)
+        noiseAmount = try c.decode(Float.self, forKey: .noiseAmount)
+        curvatureAmount = try c.decode(Float.self, forKey: .curvatureAmount)
+        rgbDarkness = try c.decodeIfPresent(Float.self, forKey: .rgbDarkness) ?? 0.0
+        rgbColor = try c.decodeIfPresent(Float.self, forKey: .rgbColor) ?? 0.0
+        vhsAmount = try c.decode(Float.self, forKey: .vhsAmount)
+        staticJump = try c.decodeIfPresent(Float.self, forKey: .staticJump) ?? 0.0
+        sizeScale = try c.decode(Float.self, forKey: .sizeScale)
+        tintR = try c.decode(Float.self, forKey: .tintR)
+        tintG = try c.decode(Float.self, forKey: .tintG)
+        tintB = try c.decode(Float.self, forKey: .tintB)
+        tintStrength = try c.decode(Float.self, forKey: .tintStrength)
+    }
 }
 
 class CRTSettings {

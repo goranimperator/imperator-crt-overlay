@@ -17,7 +17,7 @@ class OverlayWindow: NSWindow {
         self.ignoresMouseEvents = true
         self.hasShadow = false
         self.isReleasedWhenClosed = false
-        self.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
+        self.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .fullScreenDisallowsTiling]
         self.contentView?.wantsLayer = true
     }
 }
