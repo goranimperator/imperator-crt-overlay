@@ -121,6 +121,7 @@ class StatusBarController: NSObject {
             button.image = NSImage(systemSymbolName: "tv", accessibilityDescription: "CRT Overlay")
         }
         menu = NSMenu()
+        menu.autoenablesItems = false
         buildMenu()
         statusItem.menu = menu
 
@@ -151,6 +152,7 @@ class StatusBarController: NSObject {
         menu.addItem(.separator())
 
         screensMenu = NSMenu()
+        screensMenu.autoenablesItems = false
         rebuildScreensMenu()
         let screensItem = NSMenuItem(title: "Screens", action: nil, keyEquivalent: "")
         screensItem.submenu = screensMenu
@@ -170,6 +172,7 @@ class StatusBarController: NSObject {
         menu.addItem(.separator())
 
         presetsMenu = NSMenu()
+        presetsMenu.autoenablesItems = false
         rebuildPresetsMenu()
         let presetItem = NSMenuItem(title: "Presets", action: nil, keyEquivalent: "")
         presetItem.submenu = presetsMenu
@@ -264,8 +267,9 @@ class StatusBarController: NSObject {
         guard let name = sender.representedObject as? String else { return }
         let s = CRTSettings.shared
         if let preset = s.allPresets.first(where: { $0.name == name }) {
-            s.applyPreset(preset)
-            rebuildPresetsMenu()
+            DispatchQueue.main.async {
+                s.applyPreset(preset)
+            }
         }
     }
 

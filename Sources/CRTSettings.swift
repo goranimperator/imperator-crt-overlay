@@ -48,20 +48,20 @@ struct PresetData: Codable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         name = try c.decode(String.self, forKey: .name)
-        scanlineIntensity = try c.decode(Float.self, forKey: .scanlineIntensity)
-        vignetteIntensity = try c.decode(Float.self, forKey: .vignetteIntensity)
-        flickerAmount = try c.decode(Float.self, forKey: .flickerAmount)
-        noiseAmount = try c.decode(Float.self, forKey: .noiseAmount)
-        curvatureAmount = try c.decode(Float.self, forKey: .curvatureAmount)
+        scanlineIntensity = try c.decodeIfPresent(Float.self, forKey: .scanlineIntensity) ?? 0.3
+        vignetteIntensity = try c.decodeIfPresent(Float.self, forKey: .vignetteIntensity) ?? 0.25
+        flickerAmount = try c.decodeIfPresent(Float.self, forKey: .flickerAmount) ?? 0.15
+        noiseAmount = try c.decodeIfPresent(Float.self, forKey: .noiseAmount) ?? 0.1
+        curvatureAmount = try c.decodeIfPresent(Float.self, forKey: .curvatureAmount) ?? 0.3
         rgbDarkness = try c.decodeIfPresent(Float.self, forKey: .rgbDarkness) ?? 0.0
         rgbColor = try c.decodeIfPresent(Float.self, forKey: .rgbColor) ?? 0.0
-        vhsAmount = try c.decode(Float.self, forKey: .vhsAmount)
+        vhsAmount = try c.decodeIfPresent(Float.self, forKey: .vhsAmount) ?? 0.0
         staticJump = try c.decodeIfPresent(Float.self, forKey: .staticJump) ?? 0.0
-        sizeScale = try c.decode(Float.self, forKey: .sizeScale)
-        tintR = try c.decode(Float.self, forKey: .tintR)
-        tintG = try c.decode(Float.self, forKey: .tintG)
-        tintB = try c.decode(Float.self, forKey: .tintB)
-        tintStrength = try c.decode(Float.self, forKey: .tintStrength)
+        sizeScale = try c.decodeIfPresent(Float.self, forKey: .sizeScale) ?? 0.0
+        tintR = try c.decodeIfPresent(Float.self, forKey: .tintR) ?? 0.0
+        tintG = try c.decodeIfPresent(Float.self, forKey: .tintG) ?? 0.0
+        tintB = try c.decodeIfPresent(Float.self, forKey: .tintB) ?? 0.0
+        tintStrength = try c.decodeIfPresent(Float.self, forKey: .tintStrength) ?? 0.0
     }
 }
 
