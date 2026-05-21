@@ -73,6 +73,9 @@ class CRTSettings {
     var isActive: Bool = true {
         didSet { if !isBatchUpdate { save(); notify() } }
     }
+    var intensity: Float = 0.5 {
+        didSet { if !isBatchUpdate { save(); notify() } }
+    }
     var scanlineIntensity: Float = 0.3 {
         didSet { if !isBatchUpdate { activePresetName = nil; save(); notify() } }
     }
@@ -254,6 +257,7 @@ class CRTSettings {
         }
         isBatchUpdate = true
         isActive = true
+        intensity = d.object(forKey: "crt.intensity") != nil ? d.float(forKey: "crt.intensity") : 0.5
         scanlineIntensity = d.float(forKey: "crt.scanlineIntensity")
         vignetteIntensity = d.float(forKey: "crt.vignetteIntensity")
         flickerAmount = d.float(forKey: "crt.flickerAmount")
@@ -287,6 +291,7 @@ class CRTSettings {
         let d = UserDefaults.standard
         d.set(2, forKey: "crt.version")
         d.set(isActive, forKey: "crt.isActive")
+        d.set(intensity, forKey: "crt.intensity")
         d.set(scanlineIntensity, forKey: "crt.scanlineIntensity")
         d.set(vignetteIntensity, forKey: "crt.vignetteIntensity")
         d.set(flickerAmount, forKey: "crt.flickerAmount")

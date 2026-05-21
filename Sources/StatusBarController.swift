@@ -100,6 +100,7 @@ class StatusBarController: NSObject {
     private var statusItem: NSStatusItem!
     private var menu: NSMenu!
     private var pillToggle: PillToggleView!
+    private var intensitySlider: SliderMenuItemView!
     private var scanlineSlider: SliderMenuItemView!
     private var vignetteSlider: SliderMenuItemView!
     private var flickerSlider: SliderMenuItemView!
@@ -156,6 +157,7 @@ class StatusBarController: NSObject {
         let toggleMenuItem = NSMenuItem()
         toggleMenuItem.view = pillToggle
         menu.addItem(toggleMenuItem)
+        intensitySlider = addSlider(title: "Intensity", value: s.intensity) { s.intensity = $0 }
         menu.addItem(.separator())
 
         screensMenu = NSMenu()
@@ -320,6 +322,7 @@ class StatusBarController: NSObject {
     @objc private func settingsDidChange() {
         let s = CRTSettings.shared
         pillToggle.isOn = s.isActive
+        intensitySlider.setValue(s.intensity)
         scanlineSlider.setValue(s.scanlineIntensity)
         vignetteSlider.setValue(s.vignetteIntensity)
         flickerSlider.setValue(s.flickerAmount)

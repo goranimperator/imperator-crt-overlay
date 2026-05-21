@@ -27,6 +27,7 @@ struct Uniforms {
     float vhsAmount;
     float staticJump;
     float sizeScale;
+    float intensity;
 };
 
 float hash21(float2 p) {
@@ -210,6 +211,10 @@ fragment float4 crt_fragment(VertexOut in [[stage_in]],
     float3 tint = float3(u.tintR, u.tintG, u.tintB);
     result.rgb += tint * u.tintStrength * result.a;
 
+    // Master intensity: 0.5 = normal, 1.0 = 2x, 0.0 = off
+    float masterScale = u.intensity * 2.0;
+    result *= masterScale;
+
     // Clamp and enforce premultiplied constraint
     result.a = clamp(result.a, 0.0, 0.95);
     result.rgb = clamp(result.rgb, float3(0.0), float3(result.a));
@@ -240,6 +245,7 @@ class CRTMetalView: MTKView, MTKViewDelegate {
         var vhsAmount: Float
         var staticJump: Float
         var sizeScale: Float
+        var intensity: Float
     }
 
     override init(frame: CGRect, device: MTLDevice?) {
@@ -297,7 +303,8 @@ class CRTMetalView: MTKView, MTKViewDelegate {
             rgbColor: s.rgbColor,
             vhsAmount: s.vhsAmount,
             staticJump: s.staticJump,
-            sizeScale: s.sizeScale
+            sizeScale: s.sizeScale,
+            intensity: s.intensity
         )
 
         guard let buffer = commandQueue.makeCommandBuffer(),
