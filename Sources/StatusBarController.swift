@@ -125,7 +125,7 @@ class StatusBarController: NSObject {
                 img.size = NSSize(width: 18, height: 18)
                 button.image = img
             } else {
-                button.image = NSImage(systemSymbolName: "tv", accessibilityDescription: "CRT Imperator")
+                button.image = NSImage(systemSymbolName: "tv", accessibilityDescription: "Imperator CRT Overlay")
             }
         }
         menu = NSMenu()
@@ -188,7 +188,7 @@ class StatusBarController: NSObject {
         menu.addItem(presetItem)
         menu.addItem(.separator())
 
-        let quitItem = NSMenuItem(title: "Quit CRT Imperator", action: #selector(quitApp), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "Quit Imperator CRT Overlay", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
     }

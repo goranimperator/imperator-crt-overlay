@@ -5,9 +5,9 @@
     <key>CFBundleIdentifier</key>
     <string>com.crt.overlay</string>
     <key>CFBundleName</key>
-    <string>CRT Imperator</string>
+    <string>Imperator CRT Overlay</string>
     <key>CFBundleDisplayName</key>
-    <string>CRT Imperator</string>
+    <string>Imperator CRT Overlay</string>
     <key>CFBundleExecutable</key>
     <string>CRTImperator</string>
     <key>CFBundleVersion</key>

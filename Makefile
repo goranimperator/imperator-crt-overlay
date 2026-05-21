@@ -1,6 +1,6 @@
 EXE_NAME = CRTImperator
 BUILD_DIR = build
-APP_BUNDLE = $(BUILD_DIR)/CRT Imperator.app
+APP_BUNDLE = $(BUILD_DIR)/Imperator CRT Overlay.app
 CONTENTS = $(APP_BUNDLE)/Contents
 MACOS = $(CONTENTS)/MacOS
 RESOURCES = $(CONTENTS)/Resources
