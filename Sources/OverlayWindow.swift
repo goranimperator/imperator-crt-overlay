@@ -20,7 +20,7 @@ class OverlayWindow: NSPanel {
         self.ignoresMouseEvents = true
         self.hasShadow = false
         self.isReleasedWhenClosed = false
-        self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         self.contentView?.wantsLayer = true
     }
 }
