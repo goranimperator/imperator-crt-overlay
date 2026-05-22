@@ -124,18 +124,16 @@ struct PopoverContentView: View {
         VStack(spacing: 0) {
             headerView
             Divider()
-            ScrollView {
-                VStack(spacing: 0) {
-                    toggleSection
-                    Divider().padding(.horizontal, 16)
-                    screensSection
-                    Divider().padding(.horizontal, 16)
-                    slidersSection
-                    Divider().padding(.horizontal, 16)
-                    presetsSection
-                }
-                .padding(.vertical, 8)
+            VStack(spacing: 0) {
+                toggleSection
+                Divider().padding(.horizontal, 16)
+                screensSection
+                Divider().padding(.horizontal, 16)
+                slidersSection
+                Divider().padding(.horizontal, 16)
+                presetsSection
             }
+            .padding(.vertical, 8)
             Divider()
             footerView
         }
@@ -264,43 +262,72 @@ struct PopoverContentView: View {
 
     // MARK: - Presets
 
+    @State private var presetsExpanded = false
+
     private var presetsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("PRESETS")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.secondary)
-
-            ForEach(CRTSettings.builtInPresets, id: \.name) { preset in
-                PresetRow(preset: preset, isActive: vm.activePresetName == preset.name) {
-                    vm.applyPreset(preset)
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    presetsExpanded.toggle()
                 }
+            }) {
+                HStack {
+                    Text("PRESETS")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    if let name = vm.activePresetName {
+                        Text(name)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(presetsExpanded ? 90 : 0))
+                }
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
 
-            if !vm.userPresets.isEmpty {
-                Divider()
-                ForEach(vm.userPresets, id: \.name) { preset in
-                    HStack {
-                        PresetRow(preset: preset, isActive: vm.activePresetName == preset.name) {
-                            vm.applyPreset(preset)
+            if presetsExpanded {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(CRTSettings.builtInPresets, id: \.name) { preset in
+                            PresetRow(preset: preset, isActive: vm.activePresetName == preset.name) {
+                                vm.applyPreset(preset)
+                            }
                         }
-                        HoverButton(action: { vm.deletePreset(name: preset.name) }) {
-                            Image(systemName: "trash")
-                                .font(.caption)
-                                .foregroundStyle(.red.opacity(0.7))
+
+                        if !vm.userPresets.isEmpty {
+                            Divider().padding(.vertical, 4)
+                            ForEach(vm.userPresets, id: \.name) { preset in
+                                HStack {
+                                    PresetRow(preset: preset, isActive: vm.activePresetName == preset.name) {
+                                        vm.applyPreset(preset)
+                                    }
+                                    HoverButton(action: { vm.deletePreset(name: preset.name) }) {
+                                        Image(systemName: "trash")
+                                            .font(.caption)
+                                            .foregroundStyle(.red.opacity(0.7))
+                                    }
+                                }
+                            }
                         }
+
+                        HoverButton(action: { showSavePresetAlert() }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "plus.circle")
+                                    .font(.caption)
+                                Text("Save Current as Preset…")
+                                    .font(.caption)
+                            }
+                        }
+                        .padding(.top, 4)
                     }
                 }
+                .frame(maxHeight: 220)
             }
-
-            HoverButton(action: { showSavePresetAlert() }) {
-                HStack(spacing: 4) {
-                    Image(systemName: "plus.circle")
-                        .font(.caption)
-                    Text("Save Current as Preset…")
-                        .font(.caption)
-                }
-            }
-            .padding(.top, 4)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -485,7 +512,6 @@ class StatusBarController: NSObject {
 
     private func setupPopover() {
         popover = NSPopover()
-        popover.contentSize = NSSize(width: 320, height: 580)
         popover.behavior = .transient
         popover.animates = true
 
@@ -493,10 +519,12 @@ class StatusBarController: NSObject {
             NSApplication.shared.terminate(nil)
         }
 
-        popover.contentViewController = NSHostingController(
+        let hostingController = NSHostingController(
             rootView: PopoverContentView(quitAction: quitAction)
                 .environmentObject(viewModel)
         )
+        hostingController.sizingOptions = .preferredContentSize
+        popover.contentViewController = hostingController
     }
 
     @objc private func togglePopover() {
