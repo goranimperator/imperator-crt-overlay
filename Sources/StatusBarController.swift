@@ -1,288 +1,279 @@
 import AppKit
+import SwiftUI
+import Combine
+import ServiceManagement
 
-class PillToggleView: NSView {
-    var isOn: Bool { didSet { needsDisplay = true } }
-    var onToggle: ((Bool) -> Void)?
+// MARK: - Observable wrapper for CRTSettings
 
-    private let trackWidth: CGFloat = 38
-    private let trackHeight: CGFloat = 22
-    private let knobInset: CGFloat = 2
+class CRTSettingsViewModel: ObservableObject {
+    @Published var isActive: Bool
+    @Published var intensity: Float
+    @Published var scanlineIntensity: Float
+    @Published var vignetteIntensity: Float
+    @Published var flickerAmount: Float
+    @Published var noiseAmount: Float
+    @Published var curvatureAmount: Float
+    @Published var rgbDarkness: Float
+    @Published var rgbColor: Float
+    @Published var vhsAmount: Float
+    @Published var staticJump: Float
+    @Published var sizeScale: Float
+    @Published var activePresetName: String?
+    @Published var enabledScreens: Set<UInt32>
+    @Published var screens: [(UInt32, String)]
+    @Published var userPresets: [PresetData]
 
-    init(isOn: Bool) {
-        self.isOn = isOn
-        super.init(frame: NSRect(x: 0, y: 0, width: 260, height: 28))
+    private var suppressSync = false
 
-        let label = NSTextField(labelWithString: "Overlay Active")
-        label.font = .systemFont(ofSize: 13)
-        label.frame = NSRect(x: 20, y: 4, width: 120, height: 20)
-        addSubview(label)
-    }
-
-    required init?(coder: NSCoder) { fatalError() }
-
-    override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
-        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
-
-        let x: CGFloat = bounds.width - trackWidth - 16
-        let y: CGFloat = (bounds.height - trackHeight) / 2
-        let trackRect = CGRect(x: x, y: y, width: trackWidth, height: trackHeight)
-        let radius = trackHeight / 2
-
-        let trackColor = isOn ? NSColor.systemBlue : NSColor.systemGray
-        ctx.setFillColor(trackColor.cgColor)
-        ctx.addPath(CGPath(roundedRect: trackRect, cornerWidth: radius, cornerHeight: radius, transform: nil))
-        ctx.fillPath()
-
-        let knobSize = trackHeight - knobInset * 2
-        let knobX = isOn ? x + trackWidth - knobSize - knobInset : x + knobInset
-        let knobY = y + knobInset
-        let knobRect = CGRect(x: knobX, y: knobY, width: knobSize, height: knobSize)
-
-        ctx.setShadow(offset: CGSize(width: 0, height: -1), blur: 2, color: CGColor(gray: 0, alpha: 0.2))
-        ctx.setFillColor(CGColor.white)
-        ctx.addPath(CGPath(roundedRect: knobRect, cornerWidth: knobSize / 2, cornerHeight: knobSize / 2, transform: nil))
-        ctx.fillPath()
-    }
-
-    override func mouseDown(with event: NSEvent) {
-        isOn.toggle()
-        onToggle?(isOn)
-    }
-}
-
-class SliderMenuItemView: NSView {
-    private let titleLabel = NSTextField(labelWithString: "")
-    private let slider = NSSlider()
-    private let valueLabel = NSTextField(labelWithString: "")
-    var onValueChanged: ((Float) -> Void)?
-
-    init(title: String, value: Float, maxValue: Float = 1.0) {
-        super.init(frame: NSRect(x: 0, y: 0, width: 260, height: 28))
-
-        titleLabel.stringValue = title
-        titleLabel.font = .systemFont(ofSize: 13)
-        titleLabel.frame = NSRect(x: 20, y: 4, width: 75, height: 20)
-
-        slider.floatValue = value
-        slider.minValue = 0
-        slider.maxValue = Double(maxValue)
-        slider.isContinuous = true
-        slider.frame = NSRect(x: 100, y: 4, width: 115, height: 20)
-        slider.target = self
-        slider.action = #selector(sliderChanged)
-
-        valueLabel.stringValue = String(format: "%.0f%%", value * 100)
-        valueLabel.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
-        valueLabel.alignment = .right
-        valueLabel.frame = NSRect(x: 218, y: 4, width: 36, height: 20)
-
-        addSubview(titleLabel)
-        addSubview(slider)
-        addSubview(valueLabel)
-    }
-
-    required init?(coder: NSCoder) { fatalError() }
-
-    @objc private func sliderChanged() {
-        let v = slider.floatValue
-        valueLabel.stringValue = String(format: "%.0f%%", v * 100)
-        onValueChanged?(v)
-    }
-
-    func setValue(_ value: Float) {
-        slider.floatValue = value
-        valueLabel.stringValue = String(format: "%.0f%%", value * 100)
-    }
-}
-
-class StatusBarController: NSObject {
-    private var statusItem: NSStatusItem!
-    private var menu: NSMenu!
-    private var pillToggle: PillToggleView!
-    private var intensitySlider: SliderMenuItemView!
-    private var scanlineSlider: SliderMenuItemView!
-    private var vignetteSlider: SliderMenuItemView!
-    private var flickerSlider: SliderMenuItemView!
-    private var noiseSlider: SliderMenuItemView!
-    private var curvatureSlider: SliderMenuItemView!
-    private var rgbDarknessSlider: SliderMenuItemView!
-    private var rgbColorSlider: SliderMenuItemView!
-    private var vhsSlider: SliderMenuItemView!
-    private var staticSlider: SliderMenuItemView!
-    private var sizeSlider: SliderMenuItemView!
-    private var screensMenu: NSMenu!
-    private var screenItems: [UInt32: NSMenuItem] = [:]
-    private var presetsMenu: NSMenu!
-
-    override init() {
-        super.init()
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        if let button = statusItem.button {
-            if let iconPath = Bundle.main.pathForImageResource("menubar-icon") {
-                let img = NSImage(byReferencingFile: iconPath)!
-                img.isTemplate = true
-                img.size = NSSize(width: 18, height: 18)
-                button.image = img
-            } else {
-                button.image = NSImage(systemSymbolName: "tv", accessibilityDescription: "Imperator CRT Overlay")
-            }
-        }
-        menu = NSMenu()
-        menu.autoenablesItems = false
-        buildMenu()
-        statusItem.menu = menu
-
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(settingsDidChange),
-            name: .crtSettingsChanged, object: nil
-        )
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(screensDidChange),
-            name: NSApplication.didChangeScreenParametersNotification, object: nil
-        )
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(presetsDidChange),
-            name: .crtPresetsChanged, object: nil
-        )
-    }
-
-    private func buildMenu() {
+    init() {
         let s = CRTSettings.shared
+        isActive = s.isActive
+        intensity = s.intensity
+        scanlineIntensity = s.scanlineIntensity
+        vignetteIntensity = s.vignetteIntensity
+        flickerAmount = s.flickerAmount
+        noiseAmount = s.noiseAmount
+        curvatureAmount = s.curvatureAmount
+        rgbDarkness = s.rgbDarkness
+        rgbColor = s.rgbColor
+        vhsAmount = s.vhsAmount
+        staticJump = s.staticJump
+        sizeScale = s.sizeScale
+        activePresetName = s.activePresetName
+        enabledScreens = s.enabledScreens
+        userPresets = s.userPresets
+        screens = NSScreen.screens.map { (CRTSettings.displayID(for: $0), $0.localizedName) }
 
-        pillToggle = PillToggleView(isOn: s.isActive)
-        pillToggle.onToggle = { [weak self] on in
-            CRTSettings.shared.isActive = on
-        }
-        let toggleMenuItem = NSMenuItem()
-        toggleMenuItem.view = pillToggle
-        menu.addItem(toggleMenuItem)
-        intensitySlider = addSlider(title: "Intensity", value: s.intensity) { s.intensity = $0 }
-        menu.addItem(.separator())
-
-        screensMenu = NSMenu()
-        screensMenu.autoenablesItems = false
-        rebuildScreensMenu()
-        let screensItem = NSMenuItem(title: "Screens", action: nil, keyEquivalent: "")
-        screensItem.submenu = screensMenu
-        menu.addItem(screensItem)
-        menu.addItem(.separator())
-
-        scanlineSlider = addSlider(title: "Scanlines", value: s.scanlineIntensity) { s.scanlineIntensity = $0 }
-        vignetteSlider = addSlider(title: "Vignette", value: s.vignetteIntensity) { s.vignetteIntensity = $0 }
-        flickerSlider = addSlider(title: "Flicker", value: s.flickerAmount) { s.flickerAmount = $0 }
-        noiseSlider = addSlider(title: "Noise", value: s.noiseAmount) { s.noiseAmount = $0 }
-        curvatureSlider = addSlider(title: "Curvature", value: s.curvatureAmount) { s.curvatureAmount = $0 }
-        rgbDarknessSlider = addSlider(title: "RGB Dark", value: s.rgbDarkness) { s.rgbDarkness = $0 }
-        rgbColorSlider = addSlider(title: "RGB Color", value: s.rgbColor) { s.rgbColor = $0 }
-        vhsSlider = addSlider(title: "VHS", value: s.vhsAmount) { s.vhsAmount = $0 }
-        staticSlider = addSlider(title: "Static", value: s.staticJump) { s.staticJump = $0 }
-        sizeSlider = addSlider(title: "Size", value: s.sizeScale) { s.sizeScale = $0 }
-        menu.addItem(.separator())
-
-        presetsMenu = NSMenu()
-        presetsMenu.autoenablesItems = false
-        rebuildPresetsMenu()
-        let presetItem = NSMenuItem(title: "Presets", action: nil, keyEquivalent: "")
-        presetItem.submenu = presetsMenu
-        menu.addItem(presetItem)
-        menu.addItem(.separator())
-
-        let quitItem = NSMenuItem(title: "Quit Imperator CRT Overlay", action: #selector(quitApp), keyEquivalent: "q")
-        quitItem.target = self
-        menu.addItem(quitItem)
+        NotificationCenter.default.addObserver(self, selector: #selector(settingsChanged), name: .crtSettingsChanged, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(presetsChanged), name: .crtPresetsChanged, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(screensChanged), name: NSApplication.didChangeScreenParametersNotification, object: nil)
     }
 
-    private func rebuildScreensMenu() {
-        screensMenu.removeAllItems()
-        screenItems.removeAll()
+    func syncToSettings() {
+        guard !suppressSync else { return }
         let s = CRTSettings.shared
-
-        for screen in NSScreen.screens {
-            let displayID = CRTSettings.displayID(for: screen)
-            let name = screen.localizedName
-            let item = NSMenuItem(title: name, action: #selector(toggleScreen(_:)), keyEquivalent: "")
-            item.target = self
-            item.tag = Int(displayID)
-            item.state = s.isScreenEnabled(displayID) ? .on : .off
-            screensMenu.addItem(item)
-            screenItems[displayID] = item
-        }
+        s.isActive = isActive
+        s.intensity = intensity
+        s.scanlineIntensity = scanlineIntensity
+        s.vignetteIntensity = vignetteIntensity
+        s.flickerAmount = flickerAmount
+        s.noiseAmount = noiseAmount
+        s.curvatureAmount = curvatureAmount
+        s.rgbDarkness = rgbDarkness
+        s.rgbColor = rgbColor
+        s.vhsAmount = vhsAmount
+        s.staticJump = staticJump
+        s.sizeScale = sizeScale
     }
 
-    private func rebuildPresetsMenu() {
-        presetsMenu.removeAllItems()
-        let s = CRTSettings.shared
-
-        for preset in CRTSettings.builtInPresets {
-            let item = NSMenuItem(title: preset.name, action: #selector(selectPreset(_:)), keyEquivalent: "")
-            item.target = self
-            item.representedObject = preset.name
-            item.state = s.activePresetName == preset.name ? .on : .off
-            presetsMenu.addItem(item)
-        }
-
-        if !s.userPresets.isEmpty {
-            presetsMenu.addItem(.separator())
-            for preset in s.userPresets {
-                let item = NSMenuItem(title: preset.name, action: #selector(selectPreset(_:)), keyEquivalent: "")
-                item.target = self
-                item.representedObject = preset.name
-                item.state = s.activePresetName == preset.name ? .on : .off
-                presetsMenu.addItem(item)
-            }
-        }
-
-        presetsMenu.addItem(.separator())
-
-        let saveItem = NSMenuItem(title: "Save Current as Preset\u{2026}", action: #selector(savePreset), keyEquivalent: "")
-        saveItem.target = self
-        presetsMenu.addItem(saveItem)
-
-        if !s.userPresets.isEmpty {
-            let deleteMenu = NSMenu()
-            for preset in s.userPresets {
-                let item = NSMenuItem(title: preset.name, action: #selector(deletePreset(_:)), keyEquivalent: "")
-                item.target = self
-                item.representedObject = preset.name
-                deleteMenu.addItem(item)
-            }
-            let deleteItem = NSMenuItem(title: "Delete Preset", action: nil, keyEquivalent: "")
-            deleteItem.submenu = deleteMenu
-            presetsMenu.addItem(deleteItem)
-        }
-    }
-
-    private func addSlider(title: String, value: Float, onChange: @escaping (Float) -> Void) -> SliderMenuItemView {
-        let view = SliderMenuItemView(title: title, value: value)
-        view.onValueChanged = onChange
-        let item = NSMenuItem()
-        item.view = view
-        menu.addItem(item)
-        return view
-    }
-
-    @objc private func toggleOverlay() {
-        CRTSettings.shared.isActive.toggle()
-        pillToggle.isOn = CRTSettings.shared.isActive
-    }
-
-    @objc private func toggleScreen(_ sender: NSMenuItem) {
-        let displayID = UInt32(sender.tag)
+    func toggleScreen(_ displayID: UInt32) {
         CRTSettings.shared.toggleScreen(displayID)
     }
 
-    @objc private func selectPreset(_ sender: NSMenuItem) {
-        guard let name = sender.representedObject as? String else { return }
-        let s = CRTSettings.shared
-        if let preset = s.allPresets.first(where: { $0.name == name }) {
-            DispatchQueue.main.async {
-                s.applyPreset(preset)
-            }
-        }
+    func applyPreset(_ preset: PresetData) {
+        CRTSettings.shared.applyPreset(preset)
     }
 
-    @objc private func savePreset() {
+    func savePreset(name: String) {
+        CRTSettings.shared.saveCurrentAsPreset(name: name)
+    }
+
+    func deletePreset(name: String) {
+        CRTSettings.shared.deleteUserPreset(name: name)
+    }
+
+    @objc private func settingsChanged() {
+        let s = CRTSettings.shared
+        suppressSync = true
+        isActive = s.isActive
+        intensity = s.intensity
+        scanlineIntensity = s.scanlineIntensity
+        vignetteIntensity = s.vignetteIntensity
+        flickerAmount = s.flickerAmount
+        noiseAmount = s.noiseAmount
+        curvatureAmount = s.curvatureAmount
+        rgbDarkness = s.rgbDarkness
+        rgbColor = s.rgbColor
+        vhsAmount = s.vhsAmount
+        staticJump = s.staticJump
+        sizeScale = s.sizeScale
+        activePresetName = s.activePresetName
+        enabledScreens = s.enabledScreens
+        userPresets = s.userPresets
+        suppressSync = false
+    }
+
+    @objc private func presetsChanged() {
+        userPresets = CRTSettings.shared.userPresets
+        activePresetName = CRTSettings.shared.activePresetName
+    }
+
+    @objc private func screensChanged() {
+        screens = NSScreen.screens.map { (CRTSettings.displayID(for: $0), $0.localizedName) }
+        enabledScreens = CRTSettings.shared.enabledScreens
+    }
+}
+
+// MARK: - SwiftUI Popover Content
+
+struct PopoverContentView: View {
+    @EnvironmentObject var vm: CRTSettingsViewModel
+    let quitAction: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            headerView
+            Divider()
+            ScrollView {
+                VStack(spacing: 0) {
+                    toggleSection
+                    Divider().padding(.horizontal, 16)
+                    screensSection
+                    Divider().padding(.horizontal, 16)
+                    slidersSection
+                    Divider().padding(.horizontal, 16)
+                    presetsSection
+                }
+                .padding(.vertical, 8)
+            }
+            Divider()
+            footerView
+        }
+        .frame(width: 320)
+        .background(.black.opacity(0.15))
+    }
+
+    // MARK: - Header
+
+    private var headerView: some View {
+        HStack(spacing: 8) {
+            if let iconPath = Bundle.main.pathForImageResource("app-icon-small"),
+               let img = NSImage(byReferencingFile: iconPath) {
+                let sized = { () -> NSImage in
+                    img.isTemplate = true
+                    img.size = NSSize(width: 16, height: 16)
+                    return img
+                }()
+                Image(nsImage: sized)
+            }
+            Text("Imperator CRT Overlay")
+                .font(.headline)
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+
+    // MARK: - Toggle + Intensity
+
+    private var toggleSection: some View {
+        VStack(spacing: 6) {
+            HStack {
+                Text("Overlay Active")
+                    .font(.subheadline)
+                Spacer()
+                Toggle("", isOn: $vm.isActive)
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
+                    .labelsHidden()
+                    .onChange(of: vm.isActive) { _ in vm.syncToSettings() }
+            }
+            SettingsSlider(label: "Intensity", value: $vm.intensity) { vm.syncToSettings() }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+    }
+
+    // MARK: - Screens
+
+    private var screensSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("SCREENS")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+            ForEach(vm.screens, id: \.0) { displayID, name in
+                HStack {
+                    Text(name)
+                        .font(.subheadline)
+                    Spacer()
+                    Toggle("", isOn: Binding(
+                        get: { vm.enabledScreens.contains(displayID) },
+                        set: { _ in vm.toggleScreen(displayID) }
+                    ))
+                    .toggleStyle(.checkbox)
+                    .labelsHidden()
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+    }
+
+    // MARK: - Sliders
+
+    private var slidersSection: some View {
+        VStack(spacing: 4) {
+            SettingsSlider(label: "Scanlines", value: $vm.scanlineIntensity) { vm.syncToSettings() }
+            SettingsSlider(label: "Vignette", value: $vm.vignetteIntensity) { vm.syncToSettings() }
+            SettingsSlider(label: "Flicker", value: $vm.flickerAmount) { vm.syncToSettings() }
+            SettingsSlider(label: "Noise", value: $vm.noiseAmount) { vm.syncToSettings() }
+            SettingsSlider(label: "Curvature", value: $vm.curvatureAmount) { vm.syncToSettings() }
+            SettingsSlider(label: "RGB Dark", value: $vm.rgbDarkness) { vm.syncToSettings() }
+            SettingsSlider(label: "RGB Color", value: $vm.rgbColor) { vm.syncToSettings() }
+            SettingsSlider(label: "VHS", value: $vm.vhsAmount) { vm.syncToSettings() }
+            SettingsSlider(label: "Static", value: $vm.staticJump) { vm.syncToSettings() }
+            SettingsSlider(label: "Size", value: $vm.sizeScale) { vm.syncToSettings() }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+    }
+
+    // MARK: - Presets
+
+    private var presetsSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("PRESETS")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+            ForEach(CRTSettings.builtInPresets, id: \.name) { preset in
+                PresetRow(preset: preset, isActive: vm.activePresetName == preset.name) {
+                    vm.applyPreset(preset)
+                }
+            }
+
+            if !vm.userPresets.isEmpty {
+                Divider()
+                ForEach(vm.userPresets, id: \.name) { preset in
+                    HStack {
+                        PresetRow(preset: preset, isActive: vm.activePresetName == preset.name) {
+                            vm.applyPreset(preset)
+                        }
+                        HoverButton(action: { vm.deletePreset(name: preset.name) }) {
+                            Image(systemName: "trash")
+                                .font(.caption)
+                                .foregroundStyle(.red.opacity(0.7))
+                        }
+                    }
+                }
+            }
+
+            HoverButton(action: { showSavePresetAlert() }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "plus.circle")
+                        .font(.caption)
+                    Text("Save Current as Preset…")
+                        .font(.caption)
+                }
+            }
+            .padding(.top, 4)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+    }
+
+    private func showSavePresetAlert() {
         let alert = NSAlert()
         alert.messageText = "Save Preset"
         alert.informativeText = "Enter a name for the preset:"
@@ -305,45 +296,192 @@ class StatusBarController: NSObject {
                     warn.runModal()
                     return
                 }
-                CRTSettings.shared.saveCurrentAsPreset(name: name)
+                vm.savePreset(name: name)
             }
         }
     }
 
-    @objc private func deletePreset(_ sender: NSMenuItem) {
-        guard let name = sender.representedObject as? String else { return }
-        CRTSettings.shared.deleteUserPreset(name: name)
-    }
+    // MARK: - Footer
 
-    @objc private func quitApp() {
-        NSApp.terminate(nil)
-    }
-
-    @objc private func settingsDidChange() {
-        let s = CRTSettings.shared
-        pillToggle.isOn = s.isActive
-        intensitySlider.setValue(s.intensity)
-        scanlineSlider.setValue(s.scanlineIntensity)
-        vignetteSlider.setValue(s.vignetteIntensity)
-        flickerSlider.setValue(s.flickerAmount)
-        noiseSlider.setValue(s.noiseAmount)
-        curvatureSlider.setValue(s.curvatureAmount)
-        rgbDarknessSlider.setValue(s.rgbDarkness)
-        rgbColorSlider.setValue(s.rgbColor)
-        vhsSlider.setValue(s.vhsAmount)
-        staticSlider.setValue(s.staticJump)
-        sizeSlider.setValue(s.sizeScale)
-        for (displayID, item) in screenItems {
-            item.state = s.isScreenEnabled(displayID) ? .on : .off
+    private var footerView: some View {
+        HStack {
+            LaunchAtLoginToggle()
+            Spacer()
+            HoverButton(action: quitAction) {
+                Text("Quit")
+                    .font(.caption)
+            }
         }
-        rebuildPresetsMenu()
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+}
+
+// MARK: - Reusable components
+
+struct SettingsSlider: View {
+    let label: String
+    @Binding var value: Float
+    var onChange: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(label)
+                .font(.subheadline)
+                .frame(width: 72, alignment: .leading)
+            Slider(value: $value, in: 0...1)
+                .onChange(of: value) { _ in onChange() }
+            Text(String(format: "%.0f%%", value * 100))
+                .font(.system(.caption, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .frame(width: 36, alignment: .trailing)
+        }
+    }
+}
+
+struct PresetRow: View {
+    let preset: PresetData
+    let isActive: Bool
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Text(preset.name)
+                    .font(.subheadline)
+                Spacer()
+                if isActive {
+                    Image(systemName: "checkmark")
+                        .font(.caption)
+                        .foregroundStyle(.blue)
+                }
+            }
+            .padding(.vertical, 4)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isHovered ? Color.accentColor.opacity(0.1) : Color.clear)
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+    }
+}
+
+struct LaunchAtLoginToggle: View {
+    @State private var isEnabled = SMAppService.mainApp.status == .enabled
+    @State private var isHovered = false
+
+    var body: some View {
+        Toggle("Open at Login", isOn: $isEnabled)
+            .toggleStyle(.checkbox)
+            .font(.caption)
+            .foregroundStyle(.primary)
+            .opacity(isHovered ? 1.0 : 0.45)
+            .animation(.easeInOut(duration: 0.2), value: isHovered)
+            .onHover { isHovered = $0 }
+            .onChange(of: isEnabled) { newValue in
+                do {
+                    if newValue {
+                        try SMAppService.mainApp.register()
+                    } else {
+                        try SMAppService.mainApp.unregister()
+                    }
+                } catch {
+                    isEnabled = SMAppService.mainApp.status == .enabled
+                }
+            }
+    }
+}
+
+struct HoverButton<Label: View>: View {
+    let action: () -> Void
+    @ViewBuilder let label: () -> Label
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            label()
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.primary)
+        .opacity(isHovered ? 1.0 : 0.45)
+        .animation(.easeInOut(duration: 0.2), value: isHovered)
+        .onHover { isHovered = $0 }
+    }
+}
+
+// MARK: - StatusBarController
+
+class StatusBarController: NSObject {
+    private var statusItem: NSStatusItem!
+    private var popover: NSPopover!
+    private var viewModel: CRTSettingsViewModel!
+    private var eventMonitor: Any?
+
+    override init() {
+        super.init()
+        viewModel = CRTSettingsViewModel()
+
+        setupStatusItem()
+        setupPopover()
+
+        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            self?.closePopover()
+        }
     }
 
-    @objc private func screensDidChange() {
-        rebuildScreensMenu()
+    private func setupStatusItem() {
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        guard let button = statusItem.button else { return }
+
+        if let iconPath = Bundle.main.pathForImageResource("menubar-icon") {
+            let img = NSImage(byReferencingFile: iconPath)!
+            img.isTemplate = true
+            img.size = NSSize(width: 18, height: 18)
+            button.image = img
+        } else {
+            button.image = NSImage(systemSymbolName: "tv", accessibilityDescription: "Imperator CRT Overlay")
+        }
+        button.action = #selector(togglePopover)
+        button.target = self
     }
 
-    @objc private func presetsDidChange() {
-        rebuildPresetsMenu()
+    private func setupPopover() {
+        popover = NSPopover()
+        popover.contentSize = NSSize(width: 320, height: 580)
+        popover.behavior = .transient
+        popover.animates = true
+
+        let quitAction = {
+            NSApplication.shared.terminate(nil)
+        }
+
+        popover.contentViewController = NSHostingController(
+            rootView: PopoverContentView(quitAction: quitAction)
+                .environmentObject(viewModel)
+        )
+    }
+
+    @objc private func togglePopover() {
+        if popover.isShown {
+            closePopover()
+        } else {
+            showPopover()
+        }
+    }
+
+    private func showPopover() {
+        guard let button = statusItem.button else { return }
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func closePopover() {
+        guard popover.isShown else { return }
+        popover.performClose(nil)
     }
 }
