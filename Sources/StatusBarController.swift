@@ -127,9 +127,9 @@ struct PopoverContentView: View {
             VStack(spacing: 0) {
                 toggleSection
                 Divider().padding(.horizontal, 16)
-                screensSection
-                Divider().padding(.horizontal, 16)
                 slidersSection
+                Divider().padding(.horizontal, 16)
+                screensSection
                 Divider().padding(.horizontal, 16)
                 presetsSection
             }
@@ -190,25 +190,20 @@ struct PopoverContentView: View {
             Text("Imperator CRT Overlay")
                 .font(.headline)
             Spacer()
+            Toggle("", isOn: $vm.isActive)
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .labelsHidden()
+                .onChange(of: vm.isActive) { _ in vm.syncToSettings() }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
     }
 
-    // MARK: - Toggle + Intensity
+    // MARK: - Intensity
 
     private var toggleSection: some View {
         VStack(spacing: 6) {
-            HStack {
-                Text("Overlay Active")
-                    .font(.subheadline)
-                Spacer()
-                Toggle("", isOn: $vm.isActive)
-                    .toggleStyle(.switch)
-                    .controlSize(.mini)
-                    .labelsHidden()
-                    .onChange(of: vm.isActive) { _ in vm.syncToSettings() }
-            }
             SettingsSlider(label: "Intensity", value: $vm.intensity) { vm.syncToSettings() }
         }
         .padding(.horizontal, 16)
@@ -217,23 +212,42 @@ struct PopoverContentView: View {
 
     // MARK: - Screens
 
+    @State private var screensExpanded = false
+
     private var screensSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("SCREENS")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.secondary)
-
-            ForEach(vm.screens, id: \.0) { displayID, name in
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    screensExpanded.toggle()
+                }
+            }) {
                 HStack {
-                    Text(name)
-                        .font(.subheadline)
+                    Text("SCREENS")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
                     Spacer()
-                    Toggle("", isOn: Binding(
-                        get: { vm.enabledScreens.contains(displayID) },
-                        set: { _ in vm.toggleScreen(displayID) }
-                    ))
-                    .toggleStyle(.checkbox)
-                    .labelsHidden()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(screensExpanded ? 90 : 0))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if screensExpanded {
+                ForEach(vm.screens, id: \.0) { displayID, name in
+                    HStack {
+                        Text(name)
+                            .font(.subheadline)
+                        Spacer()
+                        Toggle("", isOn: Binding(
+                            get: { vm.enabledScreens.contains(displayID) },
+                            set: { _ in vm.toggleScreen(displayID) }
+                        ))
+                        .toggleStyle(.checkbox)
+                        .labelsHidden()
+                    }
                 }
             }
         }
