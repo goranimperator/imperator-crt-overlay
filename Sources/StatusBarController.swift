@@ -184,15 +184,23 @@ struct PopoverContentView: View {
 
     private var headerView: some View {
         HStack(spacing: 8) {
-            if let img = Self.sigilImage(size: 14) {
-                Image(nsImage: img)
+            if let iconPath = Bundle.main.pathForImageResource("menubar-icon"),
+               let img = NSImage(byReferencingFile: iconPath) {
+                let sized = { () -> NSImage in
+                    img.isTemplate = true
+                    img.size = NSSize(width: 14, height: 14)
+                    return img
+                }()
+                Image(nsImage: sized)
             }
             Text("Imperator CRT Overlay")
                 .font(.headline)
             Spacer()
             Toggle("", isOn: $vm.isActive)
                 .toggleStyle(.switch)
-                .controlSize(.mini)
+                .tint(imperatorRed)
+                .scaleEffect(0.55)
+                .frame(width: 36, height: 20)
                 .labelsHidden()
                 .onChange(of: vm.isActive) { _ in vm.syncToSettings() }
         }
@@ -391,6 +399,10 @@ struct PopoverContentView: View {
     }
 }
 
+// MARK: - Accent color
+
+private let imperatorRed = Color(red: 160.0/255.0, green: 24.0/255.0, blue: 24.0/255.0)
+
 // MARK: - Reusable components
 
 struct SettingsSlider: View {
@@ -403,13 +415,59 @@ struct SettingsSlider: View {
             Text(label)
                 .font(.subheadline)
                 .frame(width: 72, alignment: .leading)
-            Slider(value: $value, in: 0...1)
-                .onChange(of: value) { _ in onChange() }
+            CustomSlider(value: $value, onChange: onChange)
             Text(String(format: "%.0f%%", value * 100))
                 .font(.system(.caption, design: .monospaced))
                 .foregroundStyle(.secondary)
                 .frame(width: 36, alignment: .trailing)
         }
+    }
+}
+
+struct CustomSlider: View {
+    @Binding var value: Float
+    var onChange: () -> Void
+
+    @State private var isDragging = false
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+            let knobSize: CGFloat = 14
+            let trackH: CGFloat = 4
+            let fillW = CGFloat(value) * w
+
+            ZStack(alignment: .leading) {
+                // Track background
+                Capsule()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(height: trackH)
+
+                // Track fill
+                Capsule()
+                    .fill(imperatorRed)
+                    .frame(width: fillW, height: trackH)
+
+                // Knob
+                Circle()
+                    .fill(.white)
+                    .shadow(radius: 2)
+                    .frame(width: knobSize, height: knobSize)
+                    .offset(x: fillW - knobSize / 2)
+            }
+            .frame(height: h)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { drag in
+                        let newVal = Float(min(max(drag.location.x / w, 0), 1))
+                        value = newVal
+                        onChange()
+                    }
+            )
+        }
+        .frame(height: 20)
     }
 }
 
@@ -429,7 +487,7 @@ struct PresetRow: View {
                 if isActive {
                     Image(systemName: "checkmark")
                         .font(.caption)
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(imperatorRed)
                 }
             }
             .padding(.vertical, 4)
@@ -450,13 +508,20 @@ struct LaunchAtLoginToggle: View {
     @State private var isHovered = false
 
     var body: some View {
-        Toggle("Open at Login", isOn: $isEnabled)
-            .toggleStyle(.checkbox)
-            .font(.caption)
-            .foregroundStyle(.primary)
-            .opacity(isHovered ? 1.0 : 0.45)
-            .animation(.easeInOut(duration: 0.2), value: isHovered)
-            .onHover { isHovered = $0 }
+        HStack(spacing: 6) {
+            Text("Open at Login")
+                .font(.caption)
+            Toggle("", isOn: $isEnabled)
+                .toggleStyle(.switch)
+                .tint(imperatorRed)
+                .scaleEffect(0.55)
+                .frame(width: 36, height: 20)
+                .labelsHidden()
+        }
+        .foregroundStyle(.primary)
+        .opacity(isHovered ? 1.0 : 0.45)
+        .animation(.easeInOut(duration: 0.2), value: isHovered)
+        .onHover { isHovered = $0 }
             .onChange(of: isEnabled) { newValue in
                 do {
                     if newValue {
