@@ -253,7 +253,10 @@ struct PopoverContentView: View {
                             get: { vm.enabledScreens.contains(displayID) },
                             set: { _ in vm.toggleScreen(displayID) }
                         ))
-                        .toggleStyle(.checkbox)
+                        .toggleStyle(.switch)
+                        .tint(imperatorRed)
+                        .scaleEffect(0.55)
+                        .frame(width: 36, height: 20)
                         .labelsHidden()
                     }
                 }
