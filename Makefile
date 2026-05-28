@@ -14,7 +14,7 @@ SWIFT_FILES = Sources/main.swift \
 
 .PHONY: build run clean
 
-build: $(SWIFT_FILES) Info.plist icon.icns menubar-icon.png menubar-icon@2x.png app-icon-small.png app-icon-small@2x.png
+build: $(SWIFT_FILES) Info.plist icon.icns menubar-icon.png menubar-icon@2x.png
 	@mkdir -p "$(MACOS)" "$(RESOURCES)"
 	swiftc $(SWIFT_FILES) \
 		-o "$(MACOS)/$(EXE_NAME)" \
@@ -28,8 +28,6 @@ build: $(SWIFT_FILES) Info.plist icon.icns menubar-icon.png menubar-icon@2x.png 
 	cp icon.icns "$(RESOURCES)/icon.icns"
 	cp menubar-icon.png "$(RESOURCES)/menubar-icon.png"
 	cp "menubar-icon@2x.png" "$(RESOURCES)/menubar-icon@2x.png"
-	cp app-icon-small.png "$(RESOURCES)/app-icon-small.png"
-	cp "app-icon-small@2x.png" "$(RESOURCES)/app-icon-small@2x.png"
 	@codesign --force --deep --sign - "$(APP_BUNDLE)"
 	@echo "Build complete: $(APP_BUNDLE)"
 

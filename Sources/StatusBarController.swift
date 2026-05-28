@@ -1,6 +1,5 @@
 import AppKit
 import SwiftUI
-import Combine
 import ServiceManagement
 
 // MARK: - Observable wrapper for CRTSettings
@@ -143,44 +142,6 @@ struct PopoverContentView: View {
 
     // MARK: - Header
 
-    private static func sigilImage(size: CGFloat = 14) -> NSImage? {
-        let svg = """
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="-80 -80 160 160">
-          <defs>
-            <g id="unit">
-              <path d="
-                M 4.5 22.8
-                L 4.5 64
-                C 4.5 70, 10 69.41, 12 69.41
-                A 118.58 118.58 0 0 0 58.51 54.56
-                A 80 80 0 0 1 -58.51 54.56
-                A 118.58 118.58 0 0 0 -12 69.41
-                C -10 69.41, -4.5 70, -4.5 64
-                L -4.5 22.8
-                A 8 8 0 0 0 -8.65 15.79
-                L 8.65 15.79
-                A 8 8 0 0 0 4.5 22.8
-                Z
-              " />
-            </g>
-          </defs>
-          <g fill="#000" stroke="#000" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round">
-            <use href="#unit" />
-            <use href="#unit" transform="rotate(120)" />
-            <use href="#unit" transform="rotate(240)" />
-          </g>
-          <path fill="#000" fill-rule="evenodd" d="
-            M 22.5 0 A 22.5 22.5 0 1 0 -22.5 0 A 22.5 22.5 0 1 0 22.5 0 Z
-            M 9 0 A 9 9 0 1 0 -9 0 A 9 9 0 1 0 9 0 Z
-          " />
-        </svg>
-        """
-        guard let data = svg.data(using: .utf8),
-              let image = NSImage(data: data) else { return nil }
-        image.isTemplate = true
-        image.size = NSSize(width: size, height: size)
-        return image
-    }
 
     private var headerView: some View {
         HStack(spacing: 8) {
@@ -431,7 +392,6 @@ struct CustomSlider: View {
     @Binding var value: Float
     var onChange: () -> Void
 
-    @State private var isDragging = false
 
     var body: some View {
         GeometryReader { geo in
@@ -525,7 +485,7 @@ struct LaunchAtLoginToggle: View {
         .opacity(isHovered ? 1.0 : 0.45)
         .animation(.easeInOut(duration: 0.2), value: isHovered)
         .onHover { isHovered = $0 }
-            .onChange(of: isEnabled) { newValue in
+        .onChange(of: isEnabled) { newValue in
                 do {
                     if newValue {
                         try SMAppService.mainApp.register()
