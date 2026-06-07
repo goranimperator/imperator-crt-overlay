@@ -28,6 +28,7 @@ build: $(SWIFT_FILES) Info.plist icon.icns menubar-icon.png menubar-icon@2x.png
 	cp icon.icns "$(RESOURCES)/icon.icns"
 	cp menubar-icon.png "$(RESOURCES)/menubar-icon.png"
 	cp "menubar-icon@2x.png" "$(RESOURCES)/menubar-icon@2x.png"
+	@xcrun actool Assets.xcassets --compile "$(RESOURCES)" --platform macosx --minimum-deployment-target 13.0 --output-partial-info-plist /dev/null 2>/dev/null || true
 	@codesign --force --deep --sign - "$(APP_BUNDLE)"
 	@echo "Build complete: $(APP_BUNDLE)"
 

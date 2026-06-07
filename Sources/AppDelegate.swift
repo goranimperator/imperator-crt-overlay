@@ -8,6 +8,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var metalDevice: MTLDevice?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Force dark mode
+        NSApp.appearance = NSAppearance(named: .darkAqua)
+
+        // Override accent color to brand red
+        UserDefaults.standard.set(0, forKey: "AppleAccentColor")
+
+        // Set process name
+        ProcessInfo.processInfo.setValue("Imperator CRT Overlay", forKey: "processName")
+
         guard let device = MTLCreateSystemDefaultDevice() else {
             let alert = NSAlert()
             alert.messageText = "Metal krävs"

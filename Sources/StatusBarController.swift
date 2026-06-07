@@ -2,6 +2,27 @@ import AppKit
 import SwiftUI
 import ServiceManagement
 
+// MARK: - Brand colors & extensions
+
+enum AppColors {
+    static let brand = Color(red: 0xa0/255.0, green: 0x18/255.0, blue: 0x18/255.0)
+    static let brandFaded = brand.opacity(0.25)
+    static let accent = Color(red: 0.43, green: 0.05, blue: 0.05)
+    static let error = Color(red: 0.9, green: 0.3, blue: 0.3)
+}
+
+extension View {
+    func cursor(_ cursor: NSCursor) -> some View {
+        onHover { inside in
+            if inside { cursor.push() } else { NSCursor.pop() }
+        }
+    }
+
+    func expandTapTarget() -> some View {
+        contentShape(Rectangle())
+    }
+}
+
 // MARK: - Observable wrapper for CRTSettings
 
 class CRTSettingsViewModel: ObservableObject {
@@ -118,6 +139,7 @@ class CRTSettingsViewModel: ObservableObject {
 struct PopoverContentView: View {
     @EnvironmentObject var vm: CRTSettingsViewModel
     let quitAction: () -> Void
+    let aboutAction: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -136,30 +158,30 @@ struct PopoverContentView: View {
             Divider()
             footerView
         }
-        .frame(width: 320)
+        .frame(width: 340)
         .background(.black.opacity(0.15))
     }
 
     // MARK: - Header
-
 
     private var headerView: some View {
         HStack(spacing: 8) {
             if let iconPath = Bundle.main.pathForImageResource("menubar-icon"),
                let img = NSImage(byReferencingFile: iconPath) {
                 let sized = { () -> NSImage in
-                    img.isTemplate = true
+                    img.isTemplate = false
                     img.size = NSSize(width: 14, height: 14)
                     return img
                 }()
                 Image(nsImage: sized)
+                    .foregroundStyle(AppColors.brand)
             }
             Text("Imperator CRT Overlay")
                 .font(.headline)
             Spacer()
             Toggle("", isOn: $vm.isActive)
                 .toggleStyle(.switch)
-                .tint(imperatorRed)
+                .tint(AppColors.brand)
                 .scaleEffect(0.55)
                 .frame(width: 36, height: 20)
                 .labelsHidden()
@@ -191,16 +213,16 @@ struct PopoverContentView: View {
                 }
             }) {
                 HStack {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(screensExpanded ? 90 : 0))
                     Text("SCREENS")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.tertiary)
-                        .rotationEffect(.degrees(screensExpanded ? 90 : 0))
                 }
-                .contentShape(Rectangle())
+                .expandTapTarget()
             }
             .buttonStyle(.plain)
 
@@ -215,7 +237,7 @@ struct PopoverContentView: View {
                             set: { _ in vm.toggleScreen(displayID) }
                         ))
                         .toggleStyle(.switch)
-                        .tint(imperatorRed)
+                        .tint(AppColors.brand)
                         .scaleEffect(0.55)
                         .frame(width: 36, height: 20)
                         .labelsHidden()
@@ -258,6 +280,10 @@ struct PopoverContentView: View {
                 }
             }) {
                 HStack {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(presetsExpanded ? 90 : 0))
                     Text("PRESETS")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.secondary)
@@ -267,12 +293,8 @@ struct PopoverContentView: View {
                             .foregroundStyle(.tertiary)
                     }
                     Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.tertiary)
-                        .rotationEffect(.degrees(presetsExpanded ? 90 : 0))
                 }
-                .contentShape(Rectangle())
+                .expandTapTarget()
             }
             .buttonStyle(.plain)
 
@@ -351,21 +373,21 @@ struct PopoverContentView: View {
 
     private var footerView: some View {
         HStack {
-            LaunchAtLoginToggle()
-            Spacer()
             HoverButton(action: quitAction) {
                 Text("Quit")
                     .font(.caption)
             }
+            HoverButton(action: aboutAction) {
+                Text("About")
+                    .font(.caption)
+            }
+            Spacer()
+            LaunchAtLoginToggle()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
     }
 }
-
-// MARK: - Accent color
-
-private let imperatorRed = Color(red: 160.0/255.0, green: 24.0/255.0, blue: 24.0/255.0)
 
 // MARK: - Reusable components
 
@@ -382,6 +404,7 @@ struct SettingsSlider: View {
             CustomSlider(value: $value, onChange: onChange)
             Text(String(format: "%.0f%%", value * 100))
                 .font(.system(.caption, design: .monospaced))
+                .monospacedDigit()
                 .foregroundStyle(.secondary)
                 .frame(width: 36, alignment: .trailing)
         }
@@ -391,7 +414,6 @@ struct SettingsSlider: View {
 struct CustomSlider: View {
     @Binding var value: Float
     var onChange: () -> Void
-
 
     var body: some View {
         GeometryReader { geo in
@@ -409,13 +431,13 @@ struct CustomSlider: View {
 
                 // Track fill
                 Capsule()
-                    .fill(imperatorRed)
+                    .fill(AppColors.brand)
                     .frame(width: fillW, height: trackH)
 
                 // Knob
                 Circle()
                     .fill(.white)
-                    .shadow(radius: 2)
+                    .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
                     .frame(width: knobSize, height: knobSize)
                     .offset(x: fillW - knobSize / 2)
             }
@@ -450,7 +472,7 @@ struct PresetRow: View {
                 if isActive {
                     Image(systemName: "checkmark")
                         .font(.caption)
-                        .foregroundStyle(imperatorRed)
+                        .foregroundStyle(AppColors.brand)
                 }
             }
             .padding(.vertical, 4)
@@ -458,10 +480,11 @@ struct PresetRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(isHovered ? Color.accentColor.opacity(0.1) : Color.clear)
+                    .fill(isHovered ? AppColors.brand.opacity(0.1) : Color.clear)
             )
         }
         .buttonStyle(.plain)
+        .cursor(.pointingHand)
         .onHover { isHovered = $0 }
     }
 }
@@ -476,7 +499,7 @@ struct LaunchAtLoginToggle: View {
                 .font(.caption)
             Toggle("", isOn: $isEnabled)
                 .toggleStyle(.switch)
-                .tint(imperatorRed)
+                .tint(AppColors.brand)
                 .scaleEffect(0.55)
                 .frame(width: 36, height: 20)
                 .labelsHidden()
@@ -516,6 +539,74 @@ struct HoverButton<Label: View>: View {
     }
 }
 
+// MARK: - About Panel
+
+struct AboutView: View {
+    @State private var isLinkHovered = false
+
+    var body: some View {
+        VStack(alignment: .center, spacing: 12) {
+            if let icon = NSApp.applicationIconImage {
+                Image(nsImage: icon)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 64, height: 64)
+            }
+            Text("Imperator CRT Overlay")
+                .font(.headline)
+            Text("Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0") (Build \(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"))")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text("\u{00A9} 2024-2026 Goran Imperator")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+            Text("goranimperator.com")
+                .font(.caption)
+                .foregroundStyle(AppColors.brand)
+                .underline(isLinkHovered)
+                .onHover { isLinkHovered = $0 }
+                .cursor(.pointingHand)
+                .onTapGesture {
+                    if let url = URL(string: "https://www.goranimperator.com") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+        }
+        .padding(24)
+        .frame(width: 300, height: 260)
+        .background(.black.opacity(0.15))
+    }
+}
+
+class AboutPanelController {
+    static let shared = AboutPanelController()
+    private var panel: NSPanel?
+
+    func show() {
+        if let existing = panel, existing.isVisible {
+            existing.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let panel = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 300, height: 260),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        panel.titlebarAppearsTransparent = true
+        panel.titleVisibility = .hidden
+        panel.isMovableByWindowBackground = true
+        panel.isReleasedWhenClosed = false
+        panel.center()
+
+        let hostingView = NSHostingView(rootView: AboutView())
+        panel.contentView = hostingView
+        panel.makeKeyAndOrderFront(nil)
+        self.panel = panel
+    }
+}
+
 // MARK: - StatusBarController
 
 class StatusBarController: NSObject {
@@ -537,7 +628,7 @@ class StatusBarController: NSObject {
     }
 
     private func setupStatusItem() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         guard let button = statusItem.button else { return }
 
         if let iconPath = Bundle.main.pathForImageResource("menubar-icon") {
@@ -561,8 +652,12 @@ class StatusBarController: NSObject {
             NSApplication.shared.terminate(nil)
         }
 
+        let aboutAction = {
+            AboutPanelController.shared.show()
+        }
+
         let hostingController = NSHostingController(
-            rootView: PopoverContentView(quitAction: quitAction)
+            rootView: PopoverContentView(quitAction: quitAction, aboutAction: aboutAction)
                 .environmentObject(viewModel)
         )
         hostingController.sizingOptions = .preferredContentSize
