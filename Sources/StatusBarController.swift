@@ -166,16 +166,6 @@ struct PopoverContentView: View {
 
     private var headerView: some View {
         HStack(spacing: 8) {
-            if let iconPath = Bundle.main.pathForImageResource("menubar-icon"),
-               let img = NSImage(byReferencingFile: iconPath) {
-                let sized = { () -> NSImage in
-                    img.isTemplate = false
-                    img.size = NSSize(width: 14, height: 14)
-                    return img
-                }()
-                Image(nsImage: sized)
-                    .foregroundStyle(AppColors.brand)
-            }
             Text("Imperator CRT Overlay")
                 .font(.headline)
             Spacer()
@@ -373,16 +363,16 @@ struct PopoverContentView: View {
 
     private var footerView: some View {
         HStack {
-            HoverButton(action: quitAction) {
-                Text("Quit")
-                    .font(.caption)
-            }
+            LaunchAtLoginToggle()
+            Spacer()
             HoverButton(action: aboutAction) {
                 Text("About")
                     .font(.caption)
             }
-            Spacer()
-            LaunchAtLoginToggle()
+            HoverButton(action: quitAction) {
+                Text("Quit")
+                    .font(.caption)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
