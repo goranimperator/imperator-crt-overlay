@@ -19,8 +19,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         guard let device = MTLCreateSystemDefaultDevice() else {
             let alert = NSAlert()
-            alert.messageText = "Metal krävs"
-            alert.informativeText = "Imperator CRT Overlay kräver en Metal-kompatibel GPU."
+            alert.messageText = "Metal is required"
+            alert.informativeText = "Imperator CRT Overlay needs a Metal-capable GPU."
             alert.runModal()
             NSApp.terminate(nil)
             return

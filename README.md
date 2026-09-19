@@ -1,93 +1,168 @@
-# Mac CRT Overlay
+<p align="center">
+  <img src="app-icon.png" width="128" alt="Imperator CRT Overlay app icon">
+</p>
 
+<h1 align="center">Imperator CRT Overlay</h1>
 
+<p align="center">A macOS menu bar app that lays a live CRT and VHS effect over your screen.</p>
 
-## Getting started
+## What it is
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+The app draws a transparent overlay on top of everything else: scanlines, screen curvature,
+vignette, flicker, RGB fringing, tape noise and jitter. The overlay is rendered in Metal at
+30fps and ignores the mouse, so you keep working underneath it.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+Everything lives in the menu bar. There is no Dock icon and no window to manage.
 
-## Add your files
+- Ten effect sliders, plus a master intensity
+- Built-in presets, and your own saved on top of them
+- Per display: turn the overlay on for one screen and leave the others alone
+- Stays put through Mission Control, Spaces and Show Desktop
+- Open at Login toggle
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+Requires macOS 13 or later, Apple silicon. Built and tested on macOS 27 only, older versions
+are expected to work but have not been verified.
+
+Install at your own risk. The app is not notarized and carries no Apple Developer signature,
+so macOS cannot vouch for it. It is provided as is, with no warranty, under the MIT license.
+
+## Install
+
+Download the zip from [Releases](https://github.com/goranimperator/imperator-crt-overlay/releases),
+unpack it, and drag `Imperator CRT Overlay.app` into `/Applications`.
+
+The app is ad-hoc signed, so Gatekeeper blocks the first launch. Right-click the app and
+choose Open, then Open again in the dialog. Or clear the quarantine flag yourself:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Imperator CRT Overlay.app"
+```
+
+## Permissions
+
+None. The overlay is an ordinary borderless window that passes mouse events through, so the
+app needs no Accessibility, Screen Recording or Automation grant. Open at Login uses
+`SMAppService`, which registers the app with the system without a permission prompt.
+
+## Use
+
+Click the menu bar icon to open the panel.
+
+| Control | What it does |
+| --- | --- |
+| Header switch | Turns the overlay on and off |
+| Intensity | Master strength for every effect below |
+| Scanlines | Horizontal line darkness |
+| Vignette | Corner falloff |
+| Flicker | Brightness wobble over time |
+| Noise | Static grain |
+| Curvature | Barrel distortion, as on a real tube |
+| RGB Dark | Shadow mask darkening between phosphor stripes |
+| RGB Color | Colour separation across the stripes |
+| VHS | Tape smear and chroma bleed |
+| Static | Horizontal jump and tearing |
+| Size | Overscan, shrinking the image inside the tube |
+| Screens | One switch per display |
+| Presets | Built-in looks, plus anything you save |
+
+Settings are written to `UserDefaults` under `crt.*` keys and survive a restart.
+
+## Build
+
+No Xcode project. The app is compiled with `swiftc` from a Makefile.
+
+```bash
+make build
+```
+```bash
+make run
+```
+```bash
+make clean
+```
+
+The build stamps the binary with the current SDK while keeping the deployment target at
+macOS 13:
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/goranimperator/mac-crt-overlay.git
-git branch -M main
-git push -uf origin main
+minos 13.0
+  sdk 27.0
 ```
 
-## Integrate with your tools
+Both halves matter. AppKit picks which generation of a control to draw from the `sdk` field
+in `LC_BUILD_VERSION`, not from the macOS it is running on, so a binary stamped with an old
+SDK draws old switches and old popover chrome forever. The `minos` half is what lets the app
+launch at all below macOS 27: without an explicit `-target`, swiftc stamps the minimum with
+the toolchain's own version, which would have made the app refuse to start on the macOS 13
+this `Info.plist` advertises. `-platform_version` then pins the SDK rather than leaving it to
+the linker default. Check both with:
 
-* [Set up project integrations](https://gitlab.com/goranimperator/mac-crt-overlay/-/settings/integrations)
+```bash
+otool -l "build/Imperator CRT Overlay.app/Contents/MacOS/CRTImperator" | grep -A4 LC_BUILD_VERSION
+```
 
-## Collaborate with your team
+Ad-hoc codesigning runs as part of `make build` and is not optional. Without it Gatekeeper
+refuses the bundle outright.
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+## Release
 
-## Test and Deploy
+```bash
+make dist VERSION=x.y.z
+```
 
-Use the built-in continuous integration in GitLab.
+Builds the app, stamps the version into the built bundle, re-signs it and writes
+`dist/Imperator-CRT-Overlay-x.y.z.zip`. It touches nothing in git.
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+```bash
+make release VERSION=x.y.z
+```
 
-***
+Bumps `Info.plist`, commits, tags `vx.y.z`, pushes, and publishes the GitHub release with the
+zip attached. It refuses to run on a dirty working tree. Release notes come from
+`release-notes.md`.
 
-# Editing this README
+## Layout
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+Six Swift files, no external dependencies.
 
-## Suggestions for a good README
+| File | What is in it |
+| --- | --- |
+| `Sources/main.swift` | Entry point. Builds `NSApplication` and the delegate by hand, no `@main` |
+| `Sources/AppDelegate.swift` | Metal device, one overlay window per screen, forced dark mode, accent override, screen and Space change handling |
+| `Sources/OverlayWindow.swift` | Borderless transparent `NSPanel`, mouse-passthrough, maximum window level, `.stationary` |
+| `Sources/CRTMetalView.swift` | `MTKView` subclass that renders the effect. The Metal shader is an inline string, and its `Uniforms` struct must stay field-for-field in sync with the Swift one |
+| `Sources/CRTSettings.swift` | `CRTSettings.shared`, persistence to `UserDefaults`, presets, change notifications |
+| `Sources/StatusBarController.swift` | The whole UI: status item, popover, SwiftUI views, About panel |
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+Checks used during development live in `scripts/`. They are plain Node and take no
+dependencies:
 
-## Name
-Choose a self-explaining name for your project.
+```bash
+node scripts/check-toggles.mjs
+```
+```bash
+node scripts/check-corners.mjs
+```
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+`check-corners.mjs` compiles the app's own popover view, renders it to a bitmap, and compares
+the corner against the shape measured on the system popover.
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+## Known limits
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+- Apple silicon only. The Makefile builds one architecture, the host's.
+- The overlay redraws at a fixed 30fps and is not frame rate aware.
+- Effect parameters are global. Per-screen settings cover on and off, nothing more.
+- Not notarized, so every update needs the Gatekeeper right-click again.
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+## Third-party
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+None. AppKit, SwiftUI, Metal, MetalKit, QuartzCore and ServiceManagement only.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+## App details
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+Bundle identifier `com.goranimperator.ImperatorCRTOverlay`. `LSUIElement` is true, which is
+why there is no Dock icon.
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+MIT. See [LICENSE](LICENSE).

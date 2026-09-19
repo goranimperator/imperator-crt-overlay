@@ -2,29 +2,29 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleIdentifier</key>
-    <string>com.goranimperator.ImperatorCRTOverlay</string>
-    <key>CFBundleName</key>
-    <string>Imperator CRT Overlay</string>
-    <key>CFBundleDisplayName</key>
-    <string>Imperator CRT Overlay</string>
-    <key>CFBundleExecutable</key>
-    <string>CRTImperator</string>
-    <key>CFBundleVersion</key>
-    <string>1</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
-    <key>CFBundleIconFile</key>
-    <string>icon</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>LSUIElement</key>
-    <true/>
-    <key>NSHighResolutionCapable</key>
-    <true/>
-    <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
-    <key>NSHumanReadableCopyright</key>
-    <string>Copyright © 2024-2026 Goran Imperator. All rights reserved.</string>
+	<key>CFBundleDisplayName</key>
+	<string>Imperator CRT Overlay</string>
+	<key>CFBundleExecutable</key>
+	<string>CRTImperator</string>
+	<key>CFBundleIconFile</key>
+	<string>icon</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.goranimperator.ImperatorCRTOverlay</string>
+	<key>CFBundleName</key>
+	<string>Imperator CRT Overlay</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright © 2026 Goran Imperator. MIT License.</string>
 </dict>
 </plist>

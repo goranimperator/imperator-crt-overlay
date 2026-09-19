@@ -12,9 +12,18 @@ enum AppColors {
 }
 
 extension View {
-    func cursor(_ cursor: NSCursor) -> some View {
-        onHover { inside in
-            if inside { cursor.push() } else { NSCursor.pop() }
+    /// The system link pointer for a clickable element.
+    ///
+    /// Uses SwiftUI's scoped pointer API rather than NSCursor.push()/pop().
+    /// That stack is global: a view that disappears while hovered never gets its
+    /// exit event, so the pushed cursor is never popped and the pointing hand
+    /// leaks onto every other control, toggles included.
+    @ViewBuilder
+    func linkPointer() -> some View {
+        if #available(macOS 15.0, *) {
+            pointerStyle(.link)
+        } else {
+            self
         }
     }
 
@@ -71,6 +80,10 @@ class CRTSettingsViewModel: ObservableObject {
 
     func syncToSettings() {
         guard !suppressSync else { return }
+        // Each CRTSettings setter posts .crtSettingsChanged synchronously, which would
+        // re-enter settingsChanged() and copy stale values back over the edit in flight.
+        suppressSync = true
+        defer { suppressSync = false }
         let s = CRTSettings.shared
         s.isActive = isActive
         s.intensity = intensity
@@ -103,6 +116,7 @@ class CRTSettingsViewModel: ObservableObject {
     }
 
     @objc private func settingsChanged() {
+        guard !suppressSync else { return }
         let s = CRTSettings.shared
         suppressSync = true
         isActive = s.isActive
@@ -160,6 +174,11 @@ struct PopoverContentView: View {
         }
         .frame(width: 340)
         .background(.black.opacity(0.15))
+        // AppKit shapes the popover's glass chrome but does not clip the hosting
+        // view inside it, so an unclipped background paints square corners into
+        // the rounded shape. Measured on macOS 27: the popover's inner shape is
+        // a 20pt continuous rounded rect (fits with 0.0000pt RMS error).
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     // MARK: - Header
@@ -173,7 +192,6 @@ struct PopoverContentView: View {
                 .toggleStyle(.switch)
                 .tint(AppColors.brand)
                 .scaleEffect(0.55)
-                .frame(width: 36, height: 20)
                 .labelsHidden()
                 .onChange(of: vm.isActive) { _ in vm.syncToSettings() }
         }
@@ -229,8 +247,7 @@ struct PopoverContentView: View {
                         .toggleStyle(.switch)
                         .tint(AppColors.brand)
                         .scaleEffect(0.55)
-                        .frame(width: 36, height: 20)
-                        .labelsHidden()
+                                .labelsHidden()
                     }
                 }
             }
@@ -474,7 +491,7 @@ struct PresetRow: View {
             )
         }
         .buttonStyle(.plain)
-        .cursor(.pointingHand)
+        .linkPointer()
         .onHover { isHovered = $0 }
     }
 }
@@ -491,7 +508,6 @@ struct LaunchAtLoginToggle: View {
                 .toggleStyle(.switch)
                 .tint(AppColors.brand)
                 .scaleEffect(0.55)
-                .frame(width: 36, height: 20)
                 .labelsHidden()
         }
         .foregroundStyle(.primary)
@@ -555,7 +571,7 @@ struct AboutView: View {
                 .foregroundStyle(AppColors.brand)
                 .underline(isLinkHovered)
                 .onHover { isLinkHovered = $0 }
-                .cursor(.pointingHand)
+                .linkPointer()
                 .onTapGesture {
                     if let url = URL(string: "https://www.goranimperator.com") {
                         NSWorkspace.shared.open(url)

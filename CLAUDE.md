@@ -11,10 +11,21 @@ Imperator CRT Overlay — a macOS menu bar app that renders a real-time CRT/VHS 
 ```bash
 make build    # compile + codesign → build/Imperator CRT Overlay.app
 make run      # build + open
-make clean    # remove build/
+make clean    # remove build/ and dist/
+make dist VERSION=x.y.z      # versioned, signed zip in dist/, touches nothing in git
+make release VERSION=x.y.z   # bump, commit, tag, push, publish the GitHub release
 ```
 
-No tests, no linter, no package manager. The only verification is a successful build.
+No test framework. Verification is a successful build plus the checks in `scripts/`, which
+are plain Node and take no dependencies:
+
+```bash
+node scripts/check-toggles.mjs    # brandbook switch recipe on every Toggle
+node scripts/check-pointer.mjs    # pointer cursor scoped, never near a Toggle
+node scripts/check-corners.mjs    # popover corner matches the measured system shape
+node scripts/check-readme.mjs     # README still describes the app
+node scripts/check-hygiene.mjs    # nothing local-only tracked, no absolute paths
+```
 
 To install: `cp -R "build/Imperator CRT Overlay.app" /Applications/`
 
@@ -43,11 +54,14 @@ StatusBarController (NSPopover + NSStatusItem)
 
 ## Brandbook
 
-This app follows the Imperator Apps BrandBook (`gitlab.com:goranimperator/imperator-mac-apps-brandbook`). Key rules:
+This app follows the Imperator Apps BrandBook (`github.com:goranimperator/imperator-apps-brandbook`). Key rules:
 
 - **Accent color**: `AppColors.brand` (#A01818) everywhere. Never use bare `Color.accentColor`.
 - **Toggles**: `.switch` style, `.tint(AppColors.brand)`, `.scaleEffect(0.55)`, `.frame(width: 36, height: 20)`, `.labelsHidden()`
 - **Sliders**: 4pt track, 14pt white knob, `AppColors.brand` fill, shadow `color: .black.opacity(0.3), radius: 2, y: 1`
+- **Toggles carry no frame**: the macOS 27 switch is 54x24pt, so `scaleEffect(0.55)` gives
+  29.7x13.2. A `.frame(width: 36, height: 20)` only adds invisible padding while reading as a
+  size guarantee it does not provide. `controlSize` does nothing to a switch any more.
 - **HoverButton**: opacity 0.45→1.0, `.easeInOut(duration: 0.2)`
 - **Header**: `HStack { AppName(.headline), Spacer, Toggle }`, padding H:16 V:12, no icon
 - **Footer**: `HStack { LaunchAtLoginToggle, Spacer, About, Quit }`, padding H:16 V:10
@@ -60,5 +74,19 @@ This app follows the Imperator Apps BrandBook (`gitlab.com:goranimperator/impera
 - **No Xcode**: Build uses `swiftc` directly. Asset catalogs require `actool` (full Xcode) — the Makefile has a fallback `|| true`.
 - **Shader changes**: The Metal shader is an inline string in CRTMetalView.swift. The `Uniforms` struct in Swift and the shader `struct Uniforms` must stay in sync — field order matters for Metal buffer layout.
 - **Ad-hoc codesigning** is mandatory (`codesign --sign - --force --deep`) or Gatekeeper blocks the app.
+- **Build stamp** must read `minos 13.0 / sdk 27.0`. Two separate flags produce it, and both
+  are load-bearing. `-target arm64-apple-macos13.0` sets `minos`: without it swiftc stamps the
+  minimum with the toolchain's version (measured: `minos 27.0`), which contradicts
+  `LSMinimumSystemVersion 13.0` and stops the app launching below macOS 27.
+  `-platform_version` pins `sdk` explicitly instead of trusting the linker default, and `sdk`
+  is what AppKit reads to decide which generation of control to draw. Verify after any
+  Makefile edit:
+  `otool -l "build/Imperator CRT Overlay.app/Contents/MacOS/CRTImperator" | grep -A4 LC_BUILD_VERSION`
+- **Popover corners**: AppKit shapes the popover's glass chrome but does not clip the hosting
+  view inside it, so the SwiftUI content clips itself. Measured on macOS 27, the inner shape is
+  a 20pt continuous rounded rect.
+- **Pointer cursor**: use `linkPointer()`, never `NSCursor.push()`/`pop()`. That stack is
+  global, and a view that disappears while hovered never pops, which leaks the pointing hand
+  onto every other control.
 - **LSUIElement = true**: No Dock icon. Menu bar only.
-- **Remote**: GitLab at `gitlab.com:goranimperator/mac-crt-overlay.git`
+- **Remote**: GitHub at `github.com:goranimperator/imperator-crt-overlay.git`
