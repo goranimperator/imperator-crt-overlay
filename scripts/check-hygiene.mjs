@@ -1,6 +1,6 @@
 // G17: nothing local-only tracked, no absolute paths, ignore rules cover the build output.
 import { execSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const sh = (c) => execSync(c, { encoding: "utf8" }).trim();
 let bad = 0;
@@ -26,6 +26,8 @@ for (const rule of ["build/", "dist/", ".DS_Store", ".claude/settings.local.json
 const homePrefix = ["/Users", "goran"].join("/");
 for (const f of tracked) {
   if (!/\.(swift|md|plist|sh|mjs)$/.test(f) && f !== "Makefile") continue;
+  // A tracked path can be absent from the working tree mid-rename.
+  if (!existsSync(f)) continue;
   const body = readFileSync(f, "utf8");
   if (body.includes(homePrefix)) { console.log(`FAIL: absolute path in ${f}`); bad++; }
 }

@@ -173,18 +173,32 @@ struct PopoverContentView: View {
             footerView
         }
         .frame(width: 340)
-        .background(.black.opacity(0.15))
-        // AppKit shapes the popover's glass chrome but does not clip the hosting
-        // view inside it, so an unclipped background paints square corners into
-        // the rounded shape. Measured on macOS 27: the popover's inner shape is
-        // a 20pt continuous rounded rect (fits with 0.0000pt RMS error).
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        // No background of its own. NSPopover already draws the system material,
+        // and painting another translucent fill over it reads as a second panel
+        // sitting inside the popover rather than as the popover's own surface.
     }
 
     // MARK: - Header
 
+    /// Drawn once. The header is rebuilt on every settings change and the glyph
+    /// never varies.
+    private static let headerIcon: NSImage? = {
+        guard let path = Bundle.main.pathForImageResource("menubar-icon"),
+              let image = NSImage(byReferencingFile: path) else { return nil }
+        image.isTemplate = true
+        image.size = NSSize(width: 16, height: 16)
+        return image
+    }()
+
     private var headerView: some View {
         HStack(spacing: 8) {
+            // The app's own menu bar glyph, left of the name, as the other
+            // Imperator popover apps do it.
+            if let icon = PopoverContentView.headerIcon {
+                Image(nsImage: icon)
+                    .renderingMode(.template)
+                    .foregroundStyle(.primary)
+            }
             Text("Imperator CRT Overlay")
                 .font(.headline)
             Spacer()
@@ -580,7 +594,6 @@ struct AboutView: View {
         }
         .padding(24)
         .frame(width: 300, height: 260)
-        .background(.black.opacity(0.15))
     }
 }
 

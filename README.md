@@ -141,11 +141,11 @@ dependencies:
 node scripts/check-toggles.mjs
 ```
 ```bash
-node scripts/check-corners.mjs
+node scripts/check-background.mjs
 ```
 
-`check-corners.mjs` compiles the app's own popover view, renders it to a bitmap, and compares
-the corner against the shape measured on the system popover.
+`check-background.mjs` compiles the app's own popover view, renders it to a bitmap, and
+proves it paints nothing of its own, so the popover shows the standard macOS material.
 
 ## Known limits
 

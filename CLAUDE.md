@@ -22,7 +22,7 @@ are plain Node and take no dependencies:
 ```bash
 node scripts/check-toggles.mjs    # brandbook switch recipe on every Toggle
 node scripts/check-pointer.mjs    # pointer cursor scoped, never near a Toggle
-node scripts/check-corners.mjs    # popover corner matches the measured system shape
+node scripts/check-background.mjs    # popover paints no background of its own
 node scripts/check-readme.mjs     # README still describes the app
 node scripts/check-hygiene.mjs    # nothing local-only tracked, no absolute paths
 ```
@@ -82,9 +82,11 @@ This app follows the Imperator Apps BrandBook (`github.com:goranimperator/impera
   is what AppKit reads to decide which generation of control to draw. Verify after any
   Makefile edit:
   `otool -l "build/Imperator CRT Overlay.app/Contents/MacOS/CRTImperator" | grep -A4 LC_BUILD_VERSION`
-- **Popover corners**: AppKit shapes the popover's glass chrome but does not clip the hosting
-  view inside it, so the SwiftUI content clips itself. Measured on macOS 27, the inner shape is
-  a 20pt continuous rounded rect.
+- **Popover background**: none of the app's own. NSPopover draws the system material, and a
+  second translucent fill over it reads as a panel sitting inside the popover instead of the
+  popover's own surface, and squares off the corners the chrome rounds. The About panel is a
+  real window and gets its background the same way. Measured, for the record: the popover's
+  inner shape on macOS 27 is a 20pt continuous rounded rect, 13pt inside the window.
 - **Pointer cursor**: use `linkPointer()`, never `NSCursor.push()`/`pop()`. That stack is
   global, and a view that disappears while hovered never pops, which leaks the pointing hand
   onto every other control.
