@@ -2,7 +2,7 @@
 import { execSync } from "node:child_process";
 import { existsSync, rmSync, mkdirSync } from "node:fs";
 
-const VERSION = "1.0.1";
+const VERSION = "1.0.2";
 const zip = `dist/Imperator-CRT-Overlay-${VERSION}.zip`;
 if (!existsSync(zip)) { console.log(`FAIL: ${zip} does not exist`); process.exit(1); }
 
