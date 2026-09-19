@@ -21,10 +21,13 @@ for (const rule of ["build/", "dist/", ".DS_Store", ".claude/settings.local.json
   }
 }
 
+// Built at runtime so this file does not contain the literal it searches for,
+// which would otherwise make the check flag itself and skip nothing else.
+const homePrefix = ["/Users", "goran"].join("/");
 for (const f of tracked) {
   if (!/\.(swift|md|plist|sh|mjs)$/.test(f) && f !== "Makefile") continue;
   const body = readFileSync(f, "utf8");
-  if (body.includes("/Users/goran")) { console.log(`FAIL: absolute path in ${f}`); bad++; }
+  if (body.includes(homePrefix)) { console.log(`FAIL: absolute path in ${f}`); bad++; }
 }
 
 console.log(`tracked files: ${tracked.length}`);
