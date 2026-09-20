@@ -6,6 +6,14 @@ import ServiceManagement
 
 enum AppColors {
     static let brand = Color(red: 0xa0/255.0, green: 0x18/255.0, blue: 0x18/255.0)
+    /// Brandbook 6.1: the tint over the panel's own material.
+    ///
+    /// This was an opaque `white: 0.06` body for a day, painted to imitate the
+    /// popover imperator-widget-clock was still getting from an old SDK stamp.
+    /// Every Imperator menu bar app draws a MenuBarPanel now, which lays down
+    /// the system's `.popover` material, so the tint is what goes over it and
+    /// the opaque fill would hide the material the match depends on.
+    static let popoverBackground = Color.black.opacity(0.15)
     static let brandFaded = brand.opacity(0.25)
     static let accent = Color(red: 0.43, green: 0.05, blue: 0.05)
     static let error = Color(red: 0.9, green: 0.3, blue: 0.3)
@@ -173,9 +181,7 @@ struct PopoverContentView: View {
             footerView
         }
         .frame(width: 340)
-        // No background of its own. NSPopover already draws the system material,
-        // and painting another translucent fill over it reads as a second panel
-        // sitting inside the popover rather than as the popover's own surface.
+        .background(AppColors.popoverBackground)
     }
 
     // MARK: - Header
@@ -205,7 +211,12 @@ struct PopoverContentView: View {
             Toggle("", isOn: $vm.isActive)
                 .toggleStyle(.switch)
                 .tint(AppColors.brand)
-                .scaleEffect(0.55)
+                // Anchored trailing, not centred. `scaleEffect` shrinks what is
+                // drawn but keeps the switch's full 51pt of layout width, so a
+                // centred 0.55 scale leaves about 11pt of empty space between
+                // the switch and the padding, and the header reads as if the
+                // toggle had drifted left.
+                .scaleEffect(0.55, anchor: .trailing)
                 .labelsHidden()
                 .onChange(of: vm.isActive) { _ in vm.syncToSettings() }
         }
@@ -594,6 +605,7 @@ struct AboutView: View {
         }
         .padding(24)
         .frame(width: 300, height: 260)
+        .background(AppColors.popoverBackground)
     }
 }
 
@@ -630,9 +642,8 @@ class AboutPanelController {
 
 class StatusBarController: NSObject {
     private var statusItem: NSStatusItem!
-    private var popover: NSPopover!
+    private var panel: MenuBarPanel!
     private var viewModel: CRTSettingsViewModel!
-    private var eventMonitor: Any?
 
     override init() {
         super.init()
@@ -641,9 +652,8 @@ class StatusBarController: NSObject {
         setupStatusItem()
         setupPopover()
 
-        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            self?.closePopover()
-        }
+        // Click-outside dismissal lives in MenuBarPanel, which owns the same
+        // monitor plus the exception for the status item's own click.
     }
 
     private func setupStatusItem() {
@@ -663,10 +673,6 @@ class StatusBarController: NSObject {
     }
 
     private func setupPopover() {
-        popover = NSPopover()
-        popover.behavior = .transient
-        popover.animates = true
-
         let quitAction = {
             NSApplication.shared.terminate(nil)
         }
@@ -675,16 +681,19 @@ class StatusBarController: NSObject {
             AboutPanelController.shared.show()
         }
 
-        let hostingController = NSHostingController(
-            rootView: PopoverContentView(quitAction: quitAction, aboutAction: aboutAction)
-                .environmentObject(viewModel)
+        // A MenuBarPanel rather than an NSPopover. macOS 27 draws its own menu
+        // bar panels as plain rounded rectangles: a 17.50 pt corner, no arrow
+        // and no animation, measured off Control Centre's Wi-Fi panel. An
+        // NSPopover draws none of that and exposes none of it for adjustment.
+        panel = MenuBarPanel(
+            content: PopoverContentView(quitAction: quitAction, aboutAction: aboutAction)
+                .environmentObject(viewModel),
+            width: 340
         )
-        hostingController.sizingOptions = .preferredContentSize
-        popover.contentViewController = hostingController
     }
 
     @objc private func togglePopover() {
-        if popover.isShown {
+        if panel.isShown {
             closePopover()
         } else {
             showPopover()
@@ -693,12 +702,12 @@ class StatusBarController: NSObject {
 
     private func showPopover() {
         guard let button = statusItem.button else { return }
-        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        panel.show(from: button)
         NSApp.activate(ignoringOtherApps: true)
     }
 
     private func closePopover() {
-        guard popover.isShown else { return }
-        popover.performClose(nil)
+        guard panel.isShown else { return }
+        panel.close()
     }
 }

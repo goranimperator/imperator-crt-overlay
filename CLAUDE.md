@@ -22,7 +22,7 @@ are plain Node and take no dependencies:
 ```bash
 node scripts/check-toggles.mjs    # brandbook switch recipe on every Toggle
 node scripts/check-pointer.mjs    # pointer cursor scoped, never near a Toggle
-node scripts/check-background.mjs    # popover paints no background of its own
+node scripts/check-panel.mjs        # panel body stays translucent over its material
 node scripts/check-readme.mjs     # README still describes the app
 node scripts/check-hygiene.mjs    # nothing local-only tracked, no absolute paths
 ```
@@ -38,12 +38,12 @@ Six source files, no external dependencies:
 - **OverlayWindow.swift** — NSPanel subclass: borderless, transparent, mouse-passthrough, maximum window level, `.stationary` (persists through Mission Control/Show Desktop).
 - **CRTMetalView.swift** — MTKView subclass that renders the CRT effect at 30fps. Metal shaders are compiled from an inline string (not a .metal file). The `Uniforms` struct must match between Swift and the shader source.
 - **CRTSettings.swift** — Singleton (`CRTSettings.shared`) holding all effect parameters. Persists to UserDefaults with `crt.*` keys. Uses `NotificationCenter` (.crtSettingsChanged, .crtPresetsChanged) to broadcast changes. Built-in and user-created presets stored as `PresetData`.
-- **StatusBarController.swift** — The entire UI. Contains: `AppColors` enum, View extensions, `CRTSettingsViewModel` (ObservableObject bridging CRTSettings), `PopoverContentView` (SwiftUI), all component structs (SettingsSlider, CustomSlider, PresetRow, LaunchAtLoginToggle, HoverButton), `AboutView`/`AboutPanelController`, and `StatusBarController` (NSPopover management).
+- **StatusBarController.swift** — The entire UI. Contains: `AppColors` enum, View extensions, `CRTSettingsViewModel` (ObservableObject bridging CRTSettings), `PopoverContentView` (SwiftUI), all component structs (SettingsSlider, CustomSlider, PresetRow, LaunchAtLoginToggle, HoverButton), `AboutView`/`AboutPanelController`, and `StatusBarController` (status item and panel management).
 
 ### Data flow
 
 ```
-StatusBarController (NSPopover + NSStatusItem)
+StatusBarController (MenuBarPanel + NSStatusItem)
   └─ PopoverContentView (SwiftUI, 340pt wide)
        └─ CRTSettingsViewModel (@Published properties)
             ↕ syncs bidirectionally via NotificationCenter
@@ -82,11 +82,15 @@ This app follows the Imperator Apps BrandBook (`github.com:goranimperator/impera
   is what AppKit reads to decide which generation of control to draw. Verify after any
   Makefile edit:
   `otool -l "build/Imperator CRT Overlay.app/Contents/MacOS/CRTImperator" | grep -A4 LC_BUILD_VERSION`
-- **Popover background**: none of the app's own. NSPopover draws the system material, and a
-  second translucent fill over it reads as a panel sitting inside the popover instead of the
-  popover's own surface, and squares off the corners the chrome rounds. The About panel is a
-  real window and gets its background the same way. Measured, for the record: the popover's
-  inner shape on macOS 27 is a 20pt continuous rounded rect, 13pt inside the window.
+- **The menu bar panel is the app's own**, `Sources/MenuBarPanel.swift`, not an `NSPopover`.
+  Do not go back to `NSPopover`: it exposes no radius, and neither frame it draws is the one
+  macOS uses in the menu bar. The measurements and the reason for the 18.25 constant are
+  written in `MenuBarPanel.swift`; read them there rather than restating them. No arrow and
+  no animation, on purpose. `MenuBarPanel` owns click-outside and Escape dismissal, so the
+  app must not add monitors of its own.
+- **Panel background**: `AppColors.popoverBackground` is `Color.black.opacity(0.15)`, the
+  brandbook tint laid over the panel's `.popover` material. It must stay translucent; an
+  opaque fill hides the material. `scripts/check-panel.mjs` gates this.
 - **Pointer cursor**: use `linkPointer()`, never `NSCursor.push()`/`pop()`. That stack is
   global, and a view that disappears while hovered never pops, which leaks the pointing hand
   onto every other control.

@@ -91,7 +91,7 @@ minos 13.0
 
 Both halves matter. AppKit picks which generation of a control to draw from the `sdk` field
 in `LC_BUILD_VERSION`, not from the macOS it is running on, so a binary stamped with an old
-SDK draws old switches and old popover chrome forever. The `minos` half is what lets the app
+SDK draws old switches and old control chrome forever. The `minos` half is what lets the app
 launch at all below macOS 27: without an explicit `-target`, swiftc stamps the minimum with
 the toolchain's own version, which would have made the app refuse to start on the macOS 13
 this `Info.plist` advertises. `-platform_version` then pins the SDK rather than leaving it to
@@ -132,7 +132,8 @@ Six Swift files, no external dependencies.
 | `Sources/OverlayWindow.swift` | Borderless transparent `NSPanel`, mouse-passthrough, maximum window level, `.stationary` |
 | `Sources/CRTMetalView.swift` | `MTKView` subclass that renders the effect. The Metal shader is an inline string, and its `Uniforms` struct must stay field-for-field in sync with the Swift one |
 | `Sources/CRTSettings.swift` | `CRTSettings.shared`, persistence to `UserDefaults`, presets, change notifications |
-| `Sources/StatusBarController.swift` | The whole UI: status item, popover, SwiftUI views, About panel |
+| `Sources/StatusBarController.swift` | The whole UI: status item, panel contents, SwiftUI views, About panel |
+| `Sources/MenuBarPanel.swift` | The menu bar panel itself. A borderless `NSPanel` over `NSVisualEffectView`, so the corner radius is the app's to set. Owns click-outside and Escape dismissal |
 
 Checks used during development live in `scripts/`. They are plain Node and take no
 dependencies:
@@ -141,11 +142,30 @@ dependencies:
 node scripts/check-toggles.mjs
 ```
 ```bash
-node scripts/check-background.mjs
+node scripts/check-panel.mjs
 ```
 
-`check-background.mjs` compiles the app's own popover view, renders it to a bitmap, and
-proves it paints nothing of its own, so the popover shows the standard macOS material.
+`check-panel.mjs` compiles the app's own panel content, renders it to a bitmap, and proves
+the body stays translucent. `MenuBarPanel` lays down the system's `.popover` material and the
+content tints it; an opaque fill would hide the material the match depends on.
+
+## The menu bar panel
+
+The panel is drawn by `Sources/MenuBarPanel.swift`, not by `NSPopover`.
+
+`NSPopover` draws its own frame, exposes no radius to set, and neither frame it draws is the
+one macOS uses in the menu bar: a binary stamped `sdk 27.0` gets a 26.25 pt squircle, one
+stamped `sdk 14.0` gets a 9.5 pt circular corner. The system's own menu bar panel is neither.
+Control Centre's Wi-Fi panel, captured with `screencapture -o -l` and fitted on its bottom
+corner, measures 17.50 pt.
+
+So the app draws the surface itself: a borderless `NSPanel` whose content is an
+`NSVisualEffectView` with the `.popover` material, and a layer corner on that view. The
+constant reads 18.25 rather than 17.50 because `NSVisualEffectView` blends its edge and draws
+about 0.75 pt tighter than the radius it is given. At 17.5 it drew 16.75; at 18.25 it draws
+17.50.
+
+No arrow and no open or close animation, because macOS 27's own menu bar panels have neither.
 
 ## Known limits
 

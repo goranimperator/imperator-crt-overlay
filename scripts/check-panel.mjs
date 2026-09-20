@@ -1,7 +1,8 @@
-// Builds the app's real popover view and proves it paints no background of
-// its own, so the popover shows the standard macOS material.
+// Builds the app's real panel content and proves its body stays translucent.
+// MenuBarPanel lays down the system's `.popover` material and the content tints
+// it, so an opaque fill here would hide the material.
 import { execSync } from "node:child_process";
-import { mkdtempSync, copyFileSync } from "node:fs";
+import { mkdtempSync, copyFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -9,12 +10,15 @@ const dir = mkdtempSync(join(tmpdir(), "bgcheck-"));
 const bin = join(dir, "bgprobe");
 // Top-level expressions are legal only in a file named main.swift.
 const probe = join(dir, "main.swift");
-copyFileSync("scripts/background-probe.swift", probe);
+copyFileSync("scripts/panel-probe.swift", probe);
 
-// Every app source except main.swift, whose top-level code would own the entry point.
-const sources = execSync("git ls-files 'Sources/*.swift'", { encoding: "utf8" })
-  .split("\n")
-  .filter((f) => f && !f.endsWith("main.swift"));
+// Every app source except main.swift, whose top-level code would own the entry
+// point. Read off disk rather than out of git: a source file that is not
+// committed yet is still part of the build, and asking git for the list made
+// this gate fail to compile the moment a new file appeared.
+const sources = readdirSync("Sources")
+  .filter((f) => f.endsWith(".swift") && f !== "main.swift")
+  .map((f) => join("Sources", f));
 
 // Stamp the probe exactly as the Makefile stamps the app. AppKit draws the
 // generation of controls named by the sdk field, so a probe built without this
@@ -37,4 +41,4 @@ if (!stamp.includes("sdk 27.0")) { console.log("FAIL: probe is not stamped sdk 2
 
 const out = execSync(bin, { encoding: "utf8" });
 process.stdout.write(out);
-process.exit(out.includes("BACKGROUND_STANDARD") ? 0 : 1);
+process.exit(out.includes("PANEL_OK") ? 0 : 1);

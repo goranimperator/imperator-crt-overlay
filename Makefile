@@ -29,7 +29,8 @@ SWIFT_FILES = Sources/main.swift \
               Sources/OverlayWindow.swift \
               Sources/CRTMetalView.swift \
               Sources/CRTSettings.swift \
-              Sources/StatusBarController.swift
+              Sources/StatusBarController.swift \
+              Sources/MenuBarPanel.swift
 
 .PHONY: build run clean check-version dist release
 
