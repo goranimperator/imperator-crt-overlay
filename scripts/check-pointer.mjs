@@ -1,46 +1,45 @@
-// G8: pointer cursor only via the scoped SwiftUI API, and never on or beside a Toggle.
-// Comments are stripped first: prose that names NSCursor.push() is not a call to it.
-import { readFileSync } from "node:fs";
+// No custom hover cursor anywhere. Every hovered element keeps the macOS default
+// arrow, because macOS itself does not put a hand on a control.
+//
+// Scans every Swift source, not just the one that happened to carry a helper
+// once: a cursor set in MenuBarPanel or a view subclass is just as wrong, and
+// AppKit offers several ways in besides NSCursor.push().
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const raw = readFileSync("Sources/StatusBarController.swift", "utf8");
-const lines = raw.split("\n").map((l) => l.replace(/\/\/.*$/, ""));
-const code = lines.join("\n");
+const files = readdirSync("Sources")
+  .filter((f) => f.endsWith(".swift"))
+  .map((f) => join("Sources", f));
+
+if (files.length === 0) { console.log("FAIL: no Swift sources found, the check would be vacuous"); process.exit(1); }
+
+// Every way to change the cursor that AppKit or SwiftUI offers.
+const banned = [
+  [/NSCursor\s*\.\s*(push|pop)\s*\(/, "NSCursor.push()/pop() (a global stack that leaks when a hovered view disappears)"],
+  [/NSCursor\s*\.\s*\w+\s*\.\s*set\s*\(/, "NSCursor.<cursor>.set()"],
+  [/\.\s*addCursorRect\s*\(/, "addCursorRect()"],
+  [/func\s+resetCursorRects\s*\(/, "resetCursorRects()"],
+  [/func\s+cursorUpdate\s*\(/, "cursorUpdate()"],
+  [/\.\s*cursorUpdate\b/, "an NSTrackingArea .cursorUpdate option"],
+  [/\bpointerStyle\s*\(/, "SwiftUI pointerStyle()"],
+  [/\bpointerVisibility\s*\(/, "SwiftUI pointerVisibility()"],
+  [/func\s+linkPointer\s*\(/, "the linkPointer() helper"],
+  [/func\s+cursor\s*\(\s*_\s+cursor:\s*NSCursor/, "the NSCursor-based cursor() helper"],
+];
+
 let bad = 0;
-
-// 1. The leaky AppKit cursor-stack helper must be gone from executable code.
-if (/NSCursor\s*\.\s*(push|pop)\s*\(/.test(code)) {
-  console.log("FAIL: NSCursor push/pop is still called (it leaks pointingHand globally)");
-  bad++;
-}
-if (/func\s+cursor\s*\(\s*_\s+cursor:\s*NSCursor/.test(code)) {
-  console.log("FAIL: the NSCursor-based cursor() helper still exists");
-  bad++;
-}
-
-// 2. Pointer styling, if any, uses pointerStyle(.link). Leading dot is optional:
-//    inside a View extension it is called on implicit self.
-const pointerLines = [];
-lines.forEach((l, i) => { if (/\bpointerStyle\s*\(/.test(l)) pointerLines.push(i); });
-for (const i of pointerLines) {
-  if (!/\bpointerStyle\(\.link\)/.test(lines[i])) {
-    console.log(`FAIL line ${i + 1}: unexpected pointerStyle variant: ${lines[i].trim()}`);
-    bad++;
-  }
-}
-if (pointerLines.length === 0) { console.log("FAIL: no pointerStyle call found at all"); bad++; }
-
-// 3. No pointer styling within 12 lines of a Toggle.
-const toggleLines = [];
-lines.forEach((l, i) => { if (/^\s*Toggle\(/.test(l)) toggleLines.push(i); });
-if (toggleLines.length === 0) { console.log("FAIL: no Toggle found, the check would be vacuous"); bad++; }
-for (const t of toggleLines) {
-  for (const p of pointerLines) {
-    if (Math.abs(p - t) <= 12) {
-      console.log(`FAIL: pointerStyle at line ${p + 1} sits within 12 lines of the Toggle at line ${t + 1}`);
-      bad++;
+for (const file of files) {
+  // Comments stripped first: prose naming NSCursor.push() is not a call to it.
+  const lines = readFileSync(file, "utf8").split("\n").map((l) => l.replace(/\/\/.*$/, ""));
+  lines.forEach((line, i) => {
+    for (const [pattern, what] of banned) {
+      if (pattern.test(line)) {
+        console.log(`FAIL ${file}:${i + 1}: ${what} is not allowed: ${line.trim()}`);
+        bad++;
+      }
     }
-  }
+  });
 }
 
-console.log(`pointerStyle uses: ${pointerLines.length}, toggles: ${toggleLines.length}`);
-if (bad === 0) console.log("POINTER_OK"); else process.exit(1);
+console.log(`scanned ${files.length} sources: ${files.map((f) => f.replace("Sources/", "")).join(", ")}`);
+if (bad === 0) console.log("POINTER_OK: no custom hover cursor"); else process.exit(1);

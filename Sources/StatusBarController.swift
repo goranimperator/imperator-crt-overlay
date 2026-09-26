@@ -20,21 +20,6 @@ enum AppColors {
 }
 
 extension View {
-    /// The system link pointer for a clickable element.
-    ///
-    /// Uses SwiftUI's scoped pointer API rather than NSCursor.push()/pop().
-    /// That stack is global: a view that disappears while hovered never gets its
-    /// exit event, so the pushed cursor is never popped and the pointing hand
-    /// leaks onto every other control, toggles included.
-    @ViewBuilder
-    func linkPointer() -> some View {
-        if #available(macOS 15.0, *) {
-            pointerStyle(.link)
-        } else {
-            self
-        }
-    }
-
     func expandTapTarget() -> some View {
         contentShape(Rectangle())
     }
@@ -516,7 +501,6 @@ struct PresetRow: View {
             )
         }
         .buttonStyle(.plain)
-        .linkPointer()
         .onHover { isHovered = $0 }
     }
 }
@@ -596,7 +580,6 @@ struct AboutView: View {
                 .foregroundStyle(AppColors.brand)
                 .underline(isLinkHovered)
                 .onHover { isLinkHovered = $0 }
-                .linkPointer()
                 .onTapGesture {
                     if let url = URL(string: "https://www.goranimperator.com") {
                         NSWorkspace.shared.open(url)

@@ -21,7 +21,7 @@ are plain Node and take no dependencies:
 
 ```bash
 node scripts/check-toggles.mjs    # brandbook switch recipe on every Toggle
-node scripts/check-pointer.mjs    # pointer cursor scoped, never near a Toggle
+node scripts/check-pointer.mjs    # no custom hover cursor in any source
 node scripts/check-panel.mjs        # panel body stays translucent over its material
 node scripts/check-readme.mjs     # README still describes the app
 node scripts/check-hygiene.mjs    # nothing local-only tracked, no absolute paths
@@ -91,8 +91,8 @@ This app follows the Imperator Apps BrandBook (`github.com:goranimperator/impera
 - **Panel background**: `AppColors.popoverBackground` is `Color.black.opacity(0.15)`, the
   brandbook tint laid over the panel's `.popover` material. It must stay translucent; an
   opaque fill hides the material. `scripts/check-panel.mjs` gates this.
-- **Pointer cursor**: use `linkPointer()`, never `NSCursor.push()`/`pop()`. That stack is
-  global, and a view that disappears while hovered never pops, which leaks the pointing hand
-  onto every other control.
+- **Hover cursor**: never change it. No `pointerStyle`, no `NSCursor.push()`/`pop()`, no
+  `linkPointer()` helper. macOS does not put a hand on a control, so neither does this app.
+  `scripts/check-pointer.mjs` gates this.
 - **LSUIElement = true**: No Dock icon. Menu bar only.
 - **Remote**: GitHub at `github.com:goranimperator/imperator-crt-overlay.git`
