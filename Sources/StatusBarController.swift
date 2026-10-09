@@ -724,7 +724,12 @@ class StatusBarController: NSObject {
         if let iconPath = Bundle.main.pathForImageResource("menubar-icon") {
             let img = NSImage(byReferencingFile: iconPath)!
             img.isTemplate = true
-            img.size = NSSize(width: 18, height: 18)
+            // A 13pt glyph, drawn on whole pixels at 1x and 2x so its 1pt lines
+            // stay sharp. Imperator AirDrop's glyph is 13.1pt tall. The canvas
+            // is 16pt with the spare points below the glyph: an even height
+            // centres without a half-pixel round down, and the glyph then spans
+            // the same rows as AirDrop's in a 30pt menu bar.
+            img.size = NSSize(width: 16, height: 16)
             button.image = img
         } else {
             button.image = NSImage(systemSymbolName: "tv", accessibilityDescription: "Imperator CRT Overlay")
