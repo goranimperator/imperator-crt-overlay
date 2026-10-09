@@ -26,6 +26,7 @@ are plain Node and take no dependencies:
 | `node scripts/check-panel.mjs` | The panel body stays translucent over its material |
 | `node scripts/check-readme.mjs` | The README still describes the app |
 | `node scripts/check-hygiene.mjs` | Nothing local-only tracked, no absolute paths |
+| `node scripts/check-release-zip.mjs` | The release zip carries the version, a valid signature and sdk 27.0 |
 
 Commands are kept out of comment-carrying code blocks on purpose: pasted into zsh with
 interactive comments off, a trailing `# ...` turns into extra arguments.
@@ -111,7 +112,7 @@ This app follows the Imperator Apps BrandBook (`github.com:goranimperator/impera
 - **Settings writes**: `syncToSettings()` writes only the values that changed. Every setter
   saves and notifies, and the effect setters clear the active preset.
 - **Preset state**: a preset holds every slider, Intensity included (presets saved before
-  1.1.0 take the intensity in use when they are loaded). `activePresetName` is the exact
+  1.0.3 take the intensity in use when they are loaded). `activePresetName` is the exact
   match and clears on the first slider edit. `basePresetName` is the user preset the values came from and survives edits; the
   Update pill on that row shows while `isBasePresetModified` is true.
 - **Panel background**: `AppColors.popoverBackground` is `Color.black.opacity(0.15)`, the

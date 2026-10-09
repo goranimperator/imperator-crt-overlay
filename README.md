@@ -136,17 +136,23 @@ Seven Swift files, no external dependencies.
 | `Sources/CRTMetalView.swift` | `MTKView` subclass that renders the effect. The Metal shader is an inline string, and its `Uniforms` struct must stay field-for-field in sync with the Swift one |
 | `Sources/CRTSettings.swift` | `CRTSettings.shared`, persistence to `UserDefaults`, presets, change notifications |
 | `Sources/StatusBarController.swift` | The whole UI: status item, panel contents, SwiftUI views, About panel |
-| `Sources/MenuBarPanel.swift` | The menu bar panel itself. A borderless `NSPanel` over `NSVisualEffectView`, so the corner radius is the app's to set. Owns click-outside and Escape dismissal |
+| `Sources/MenuBarPanel.swift` | The menu bar panel itself. A borderless `NSPanel` over `NSVisualEffectView`, so the corner radius is the app's to set. Owns click-outside, Escape and deactivation dismissal |
 
 Checks used during development live in `scripts/`. They are plain Node and take no
-dependencies:
+dependencies. Run each from the repo root, for example:
 
-```bash
-node scripts/check-toggles.mjs
-```
 ```bash
 node scripts/check-panel.mjs
 ```
+
+| Check | What it gates |
+| --- | --- |
+| `check-toggles.mjs` | The brandbook switch recipe on every Toggle |
+| `check-pointer.mjs` | No custom hover cursor in any source |
+| `check-panel.mjs` | The panel body stays translucent over its material |
+| `check-readme.mjs` | This README still describes the app |
+| `check-hygiene.mjs` | Nothing local-only tracked, no absolute paths |
+| `check-release-zip.mjs` | The release zip carries the right version, a valid signature and the SDK stamp |
 
 `check-panel.mjs` compiles the app's own panel content, renders it to a bitmap, and proves
 the body stays translucent. `MenuBarPanel` lays down the system's `.popover` material and the

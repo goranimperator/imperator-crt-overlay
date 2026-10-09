@@ -1,3 +1,5 @@
+A new app icon: a TV with the Imperator sigil on its screen.
+
 The menu bar panel is now drawn by the app instead of NSPopover. It has the same corner as the
 macOS menu bar panels, no arrow, and opens and closes without animation. The Presets and
 Screens sections fold open downward and close upward, and the preset list no longer opens

@@ -22,7 +22,7 @@ struct PresetData: Codable {
     }
 
     var name: String
-    /// Master intensity. Part of a preset since 1.1.0; presets saved before
+    /// Master intensity. Part of a preset since 1.0.3; presets saved before
     /// that get the intensity in use when they were migrated.
     var intensity: Float
     var scanlineIntensity: Float
