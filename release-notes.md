@@ -1,4 +1,5 @@
-A new app icon: a TV with the Imperator sigil on its screen.
+New icons: the app icon is a TV with the Imperator sigil on its screen, and the menu bar
+icon is a small TV on its stand, the same height as the other Imperator apps' icons.
 
 The menu bar panel is now drawn by the app instead of NSPopover. It has the same corner as the
 macOS menu bar panels, no arrow, and opens and closes without animation. The Presets and
@@ -10,7 +11,8 @@ when you update, and choosing a built-in preset sets its own.
 
 Your own presets get an Update button. Pick one of them, change any slider, Intensity
 included, and a red Update pill appears on its row; it saves the changes into that preset.
-Saving under an existing name still overwrites it.
+Saving under an existing name still overwrites it. Your own presets and the Save button now
+sit at the top of the list, above the built-in looks.
 
 Fixes:
 

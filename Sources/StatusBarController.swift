@@ -342,15 +342,10 @@ struct PopoverContentView: View {
                 // Plain rows, no ScrollView, as in imperator-eq. A ScrollView's
                 // minimum height is zero, and the panel sizes to its content's
                 // minimum, so the list opened with no height at all.
+                // The user's own presets and the save button come first, the
+                // built-in looks below the divider.
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(CRTSettings.builtInPresets, id: \.name) { preset in
-                        PresetRow(preset: preset, isActive: vm.currentPresetName == preset.name) {
-                            vm.applyPreset(preset)
-                        }
-                    }
-
                     if !vm.userPresets.isEmpty {
-                        Divider().padding(.vertical, 4)
                         ForEach(vm.userPresets, id: \.name) { preset in
                             HStack {
                                 PresetRow(
@@ -378,7 +373,15 @@ struct PopoverContentView: View {
                                 .font(.caption)
                         }
                     }
-                    .padding(.top, 4)
+                    .padding(.top, vm.userPresets.isEmpty ? 0 : 4)
+
+                    Divider().padding(.vertical, 6)
+
+                    ForEach(CRTSettings.builtInPresets, id: \.name) { preset in
+                        PresetRow(preset: preset, isActive: vm.currentPresetName == preset.name) {
+                            vm.applyPreset(preset)
+                        }
+                    }
                 }
             }
         }

@@ -64,7 +64,7 @@ Click the menu bar icon to open the panel.
 | Static | Horizontal jump and tearing |
 | Size | Scale of the pattern: the pitch of the scanlines, the RGB grid, the VHS bands and the static blocks |
 | Screens | One switch per display. A display the app has not seen before starts on |
-| Presets | Built-in looks, plus your own. A preset holds every slider, Intensity included. Saving under an existing name overwrites that preset. Change a slider while one of your own presets is selected and an Update button appears on its row, which saves the changes into it |
+| Presets | Your own presets and the Save button on top, the built-in looks below them. A preset holds every slider, Intensity included. Saving under an existing name overwrites that preset. Change a slider while one of your own presets is selected and an Update button appears on its row, which saves the changes into it |
 
 Settings are written to `UserDefaults` under `crt.*` keys and survive a restart, except the header switch: the overlay always starts on.
 

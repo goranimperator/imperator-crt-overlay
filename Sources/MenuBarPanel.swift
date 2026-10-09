@@ -117,6 +117,11 @@ final class MenuBarPanel: NSPanel {
             forName: NSApplication.didResignActiveNotification, object: nil, queue: .main
         ) { [weak self] _ in
             guard let self, self.isVisible else { return }
+            // A click on the menu bar item resigns the app before the item's
+            // action arrives: macOS 27 hosts status items in a scene of their
+            // own. Closing here let that action find the panel closed and open
+            // it again, so the item's toggle closes it instead.
+            if let window = self.anchor?.window, window.frame.contains(NSEvent.mouseLocation) { return }
             self.close()
         }
     }
