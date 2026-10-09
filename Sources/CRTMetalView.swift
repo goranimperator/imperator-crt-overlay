@@ -76,7 +76,7 @@ fragment float4 crt_fragment(VertexOut in [[stage_in]],
         // Dark gap borders
         result.a += isGap * u.rgbDarkness * 0.375;
 
-        // Colored cells — strong premultiplied color
+        // Colored cells: strong premultiplied color
         int ch = int(cell.x) % 3;
         float3 rgb = float3(0.0);
         if (ch == 0)      rgb = float3(1.0, 0.0, 0.0);
@@ -199,7 +199,7 @@ fragment float4 crt_fragment(VertexOut in [[stage_in]],
         float rollOn = step(0.7, hash21(float2(floor(t * 0.4), 55.0)));
         result.a += rollBar * rollOn * u.staticJump * 0.2;
 
-        // Frame jump — brief dark band at random Y
+        // Frame jump: brief dark band at random Y
         float jumpSeed = floor(t * 3.0);
         float jumpOn = step(0.88, hash21(float2(jumpSeed, 42.0)));
         float jumpY = hash21(float2(jumpSeed, 13.0));
@@ -207,7 +207,7 @@ fragment float4 crt_fragment(VertexOut in [[stage_in]],
         result.a += jumpBand * jumpOn * u.staticJump * 0.35;
     }
 
-    // === Color tint — tints proportionally to darkened area ===
+    // === Color tint: tints proportionally to darkened area ===
     float3 tint = float3(u.tintR, u.tintG, u.tintB);
     result.rgb += tint * u.tintStrength * result.a;
 
@@ -284,7 +284,16 @@ class CRTMetalView: MTKView, MTKViewDelegate {
               let descriptor = currentRenderPassDescriptor else { return }
 
         let s = CRTSettings.shared
-        let time = Float(CFAbsoluteTimeGetCurrent() - startTime)
+        // Wrapped, and in Double before the wrap. The shader feeds time into
+        // hash21 (t * 500 for the VHS glitch, t * 100 for static blocks, floor(t)
+        // seeds elsewhere), and hash21 multiplies by about 456 before fract():
+        // past roughly 2 minutes of uptime the Float products lost every
+        // fractional bit, so the glitch noise, static bursts, tearing and jitter
+        // froze or vanished one by one. Measured working through 90 s, dead from
+        // about 136 s, so a 60 s cycle stays inside the range that works. The
+        // wrap reseeds the noise and moves the slow VHS bands once a minute,
+        // which reads as one more tracking glitch.
+        let time = Float((CFAbsoluteTimeGetCurrent() - startTime).truncatingRemainder(dividingBy: 60))
 
         var uniforms = Uniforms(
             resolution: SIMD2<Float>(Float(drawableSize.width), Float(drawableSize.height)),
@@ -311,7 +320,9 @@ class CRTMetalView: MTKView, MTKViewDelegate {
               let encoder = buffer.makeRenderCommandEncoder(descriptor: descriptor) else { return }
 
         encoder.setRenderPipelineState(pipelineState)
-        encoder.setFragmentBytes(&uniforms, length: MemoryLayout<Uniforms>.size, index: 0)
+        // stride, not size: the shader's struct is padded to 80 bytes, and Metal
+        // validation rejects a 76-byte binding.
+        encoder.setFragmentBytes(&uniforms, length: MemoryLayout<Uniforms>.stride, index: 0)
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         encoder.endEncoding()
 

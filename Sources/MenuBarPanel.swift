@@ -37,6 +37,7 @@ final class MenuBarPanel: NSPanel {
     private let container = NSVisualEffectView()
     private var clickMonitor: Any?
     private var keyMonitor: Any?
+    private var resignObserver: NSObjectProtocol?
     /// The menu bar button this panel hangs off, so a click on it is left to the
     /// button's own action instead of being treated as a click outside.
     private weak var anchor: NSStatusBarButton?
@@ -107,6 +108,17 @@ final class MenuBarPanel: NSPanel {
             host.bottomAnchor.constraint(equalTo: container.bottomAnchor),
         ])
         contentView = container
+
+        // hidesOnDeactivate only hides the panel in the window server: close()
+        // never runs and isVisible stays true. A keyboard reactivation (Spotlight,
+        // open -a) then put the panel back unasked, and the first status-item
+        // click after Cmd-Tab closed the invisible panel instead of opening it.
+        resignObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didResignActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            guard let self, self.isVisible else { return }
+            self.close()
+        }
     }
 
     var isShown: Bool { isVisible }
@@ -141,6 +153,11 @@ final class MenuBarPanel: NSPanel {
     /// go with the panel. A `close(_:)` with a default argument would be a
     /// second method beside NSWindow's, and a plain `close()` call skips it.
     override func close() {
+        // A sheet left attached would be parked with the panel and come back on
+        // the next open, still waiting for an answer. Closing cancels it.
+        if let sheet = attachedSheet {
+            endSheet(sheet, returnCode: .cancel)
+        }
         stopMonitoring()
         super.close()
         onClose?()
@@ -189,5 +206,8 @@ final class MenuBarPanel: NSPanel {
     // SwiftUI content unable to take the Escape key or drive its controls.
     override var canBecomeKey: Bool { true }
 
-    deinit { stopMonitoring() }
+    deinit {
+        stopMonitoring()
+        if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
+    }
 }

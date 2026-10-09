@@ -7,7 +7,7 @@ You must strictly adhere to the following principles for all code generations, m
 
 Before implementing any code:
 - **State assumptions:** Explicitly list your assumptions. If uncertain about anything, ask before writing code.
-- **Handle ambiguity:** If multiple interpretations exist, present them to the user—do not pick one silently.
+- **Handle ambiguity:** If multiple interpretations exist, present them to the user; do not pick one silently.
 - **Propose simpler alternatives:** If a simpler approach exists, suggest it. Push back against complexity when warranted.
 - **Stop on confusion:** If instructions are unclear, stop immediately. Name exactly what is confusing and ask for clarification.
 
@@ -28,7 +28,7 @@ When editing existing code:
 - **Isolation:** Do not "improve" or touch adjacent code, comments, or formatting.
 - **No unprompted refactoring:** Do not refactor things that are not broken.
 - **Style matching:** Match the existing codebase style perfectly, even if you would personally design it differently.
-- **Dead code:** If you notice unrelated dead code, mention it to the user—do not delete it on your own.
+- **Dead code:** If you notice unrelated dead code, mention it to the user; do not delete it on your own.
 
 When your changes create orphans:
 - **Clean up your mess:** Remove imports, variables, or functions that *your* changes made unused.

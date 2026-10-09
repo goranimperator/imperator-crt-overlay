@@ -41,6 +41,8 @@ class CRTSettingsViewModel: ObservableObject {
     @Published var staticJump: Float
     @Published var sizeScale: Float
     @Published var activePresetName: String?
+    @Published var basePresetName: String?
+    @Published var basePresetModified = false
     @Published var enabledScreens: Set<UInt32>
     @Published var screens: [(UInt32, String)]
     @Published var userPresets: [PresetData]
@@ -62,6 +64,8 @@ class CRTSettingsViewModel: ObservableObject {
         staticJump = s.staticJump
         sizeScale = s.sizeScale
         activePresetName = s.activePresetName
+        basePresetName = s.basePresetName
+        basePresetModified = s.isBasePresetModified
         enabledScreens = s.enabledScreens
         userPresets = s.userPresets
         screens = NSScreen.screens.map { (CRTSettings.displayID(for: $0), $0.localizedName) }
@@ -78,18 +82,43 @@ class CRTSettingsViewModel: ObservableObject {
         suppressSync = true
         defer { suppressSync = false }
         let s = CRTSettings.shared
-        s.isActive = isActive
-        s.intensity = intensity
-        s.scanlineIntensity = scanlineIntensity
-        s.vignetteIntensity = vignetteIntensity
-        s.flickerAmount = flickerAmount
-        s.noiseAmount = noiseAmount
-        s.curvatureAmount = curvatureAmount
-        s.rgbDarkness = rgbDarkness
-        s.rgbColor = rgbColor
-        s.vhsAmount = vhsAmount
-        s.staticJump = staticJump
-        s.sizeScale = sizeScale
+        // Only what changed. Every setter saves and notifies, and each preset
+        // value's setter also clears the active preset, so writing all twelve
+        // meant the header switch dropped the preset, and one slider event cost
+        // twelve notifications and 252 UserDefaults writes.
+        func write<T: Equatable>(_ key: ReferenceWritableKeyPath<CRTSettings, T>, _ value: T) {
+            if s[keyPath: key] != value { s[keyPath: key] = value }
+        }
+        write(\.isActive, isActive)
+        write(\.intensity, intensity)
+        write(\.scanlineIntensity, scanlineIntensity)
+        write(\.vignetteIntensity, vignetteIntensity)
+        write(\.flickerAmount, flickerAmount)
+        write(\.noiseAmount, noiseAmount)
+        write(\.curvatureAmount, curvatureAmount)
+        write(\.rgbDarkness, rgbDarkness)
+        write(\.rgbColor, rgbColor)
+        write(\.vhsAmount, vhsAmount)
+        write(\.staticJump, staticJump)
+        write(\.sizeScale, sizeScale)
+        // The notifications suppressed above are also how the presets list
+        // learns that an edit took the values off a preset.
+        refreshPresetState()
+    }
+
+    /// The preset the list marks as current: the exact match, or else the user
+    /// preset whose values are being edited.
+    var currentPresetName: String? { activePresetName ?? basePresetName }
+
+    private func refreshPresetState() {
+        let s = CRTSettings.shared
+        activePresetName = s.activePresetName
+        basePresetName = s.basePresetName
+        basePresetModified = s.isBasePresetModified
+    }
+
+    func updateBasePreset() {
+        CRTSettings.shared.updateBasePreset()
     }
 
     func toggleScreen(_ displayID: UInt32) {
@@ -124,15 +153,15 @@ class CRTSettingsViewModel: ObservableObject {
         vhsAmount = s.vhsAmount
         staticJump = s.staticJump
         sizeScale = s.sizeScale
-        activePresetName = s.activePresetName
         enabledScreens = s.enabledScreens
         userPresets = s.userPresets
+        refreshPresetState()
         suppressSync = false
     }
 
     @objc private func presetsChanged() {
         userPresets = CRTSettings.shared.userPresets
-        activePresetName = CRTSettings.shared.activePresetName
+        refreshPresetState()
     }
 
     @objc private func screensChanged() {
@@ -225,11 +254,9 @@ struct PopoverContentView: View {
 
     private var screensSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Button(action: {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    screensExpanded.toggle()
-                }
-            }) {
+            // No animation, as in imperator-eq: the panel window resizes at once,
+            // so animated content slid against it and the whole panel jumped.
+            Button(action: { screensExpanded.toggle() }) {
                 HStack {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 11, weight: .medium))
@@ -256,8 +283,8 @@ struct PopoverContentView: View {
                         ))
                         .toggleStyle(.switch)
                         .tint(AppColors.brand)
-                        .scaleEffect(0.55)
-                                .labelsHidden()
+                        .scaleEffect(0.55, anchor: .trailing)
+                        .labelsHidden()
                     }
                 }
             }
@@ -291,11 +318,7 @@ struct PopoverContentView: View {
 
     private var presetsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Button(action: {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    presetsExpanded.toggle()
-                }
-            }) {
+            Button(action: { presetsExpanded.toggle() }) {
                 HStack {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 11, weight: .medium))
@@ -304,7 +327,7 @@ struct PopoverContentView: View {
                     Text("PRESETS")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.secondary)
-                    if let name = vm.activePresetName {
+                    if let name = vm.currentPresetName {
                         Text(name)
                             .font(.system(size: 11))
                             .foregroundStyle(.tertiary)
@@ -316,42 +339,47 @@ struct PopoverContentView: View {
             .buttonStyle(.plain)
 
             if presetsExpanded {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(CRTSettings.builtInPresets, id: \.name) { preset in
-                            PresetRow(preset: preset, isActive: vm.activePresetName == preset.name) {
-                                vm.applyPreset(preset)
-                            }
+                // Plain rows, no ScrollView, as in imperator-eq. A ScrollView's
+                // minimum height is zero, and the panel sizes to its content's
+                // minimum, so the list opened with no height at all.
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(CRTSettings.builtInPresets, id: \.name) { preset in
+                        PresetRow(preset: preset, isActive: vm.currentPresetName == preset.name) {
+                            vm.applyPreset(preset)
                         }
+                    }
 
-                        if !vm.userPresets.isEmpty {
-                            Divider().padding(.vertical, 4)
-                            ForEach(vm.userPresets, id: \.name) { preset in
-                                HStack {
-                                    PresetRow(preset: preset, isActive: vm.activePresetName == preset.name) {
-                                        vm.applyPreset(preset)
-                                    }
-                                    HoverButton(action: { vm.deletePreset(name: preset.name) }) {
-                                        Image(systemName: "trash")
-                                            .font(.caption)
-                                            .foregroundStyle(.red.opacity(0.7))
-                                    }
+                    if !vm.userPresets.isEmpty {
+                        Divider().padding(.vertical, 4)
+                        ForEach(vm.userPresets, id: \.name) { preset in
+                            HStack {
+                                PresetRow(
+                                    preset: preset,
+                                    isActive: vm.currentPresetName == preset.name,
+                                    onUpdate: preset.name == vm.basePresetName && vm.basePresetModified
+                                        ? { vm.updateBasePreset() } : nil
+                                ) {
+                                    vm.applyPreset(preset)
+                                }
+                                HoverButton(action: { vm.deletePreset(name: preset.name) }) {
+                                    Image(systemName: "trash")
+                                        .font(.caption)
+                                        .foregroundStyle(.red.opacity(0.7))
                                 }
                             }
                         }
-
-                        HoverButton(action: { showSavePresetAlert() }) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "plus.circle")
-                                    .font(.caption)
-                                Text("Save Current as Preset…")
-                                    .font(.caption)
-                            }
-                        }
-                        .padding(.top, 4)
                     }
+
+                    HoverButton(action: { showSavePresetAlert() }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "plus.circle")
+                                .font(.caption)
+                            Text("Save Current as Preset…")
+                                .font(.caption)
+                        }
+                    }
+                    .padding(.top, 4)
                 }
-                .frame(maxHeight: 220)
             }
         }
         .padding(.horizontal, 16)
@@ -370,19 +398,25 @@ struct PopoverContentView: View {
         alert.accessoryView = textField
         alert.window.initialFirstResponder = textField
 
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
+        // A sheet on the panel, not runModal(). The panel floats at .popUpMenu,
+        // above the level of an app-modal alert, so a modal alert opened
+        // underneath it. A sheet belongs to the panel and shows on top of it,
+        // and MenuBarPanel holds back its click-outside and Escape handling
+        // while a sheet is attached.
+        guard let panel = NSApp.windows.first(where: { $0 is MenuBarPanel && $0.isVisible }) else { return }
+        alert.beginSheetModal(for: panel) { response in
+            guard response == .alertFirstButtonReturn else { return }
             let name = textField.stringValue.trimmingCharacters(in: .whitespaces)
-            if !name.isEmpty {
-                if CRTSettings.shared.isBuiltIn(name) {
-                    let warn = NSAlert()
-                    warn.messageText = "Reserved Name"
-                    warn.informativeText = "'\(name)' is a built-in preset. Choose a different name."
-                    warn.runModal()
-                    return
-                }
-                vm.savePreset(name: name)
+            guard !name.isEmpty else { return }
+            if CRTSettings.shared.isBuiltIn(name) {
+                let warn = NSAlert()
+                warn.messageText = "Reserved Name"
+                warn.informativeText = "'\(name)' is a built-in preset. Choose a different name."
+                warn.beginSheetModal(for: panel)
+                return
             }
+            // A user preset with the same name is overwritten.
+            vm.savePreset(name: name)
         }
     }
 
@@ -464,6 +498,8 @@ struct CustomSlider: View {
                 DragGesture(minimumDistance: 0)
                     .onChanged { drag in
                         let newVal = Float(min(max(drag.location.x / w, 0), 1))
+                        // Past either end the value stays pinned; that is not a change.
+                        guard newVal != value else { return }
                         value = newVal
                         onChange()
                     }
@@ -476,44 +512,68 @@ struct CustomSlider: View {
 struct PresetRow: View {
     let preset: PresetData
     let isActive: Bool
+    /// Set only on the user preset being edited, once its values have changed.
+    var onUpdate: (() -> Void)? = nil
     let action: () -> Void
 
     @State private var isHovered = false
 
     var body: some View {
-        Button(action: action) {
-            HStack {
-                Text(preset.name)
-                    .font(.subheadline)
-                Spacer()
-                if isActive {
-                    Image(systemName: "checkmark")
-                        .font(.caption)
-                        .foregroundStyle(AppColors.brand)
+        HStack(spacing: 8) {
+            Text(preset.name)
+                .font(.subheadline)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let onUpdate {
+                // Its own button inside the tappable row: a click on the pill
+                // updates the preset and does not also re-apply it.
+                Button(action: onUpdate) {
+                    // Smaller than the name so the pill, filled to the row's
+                    // height below, comes out exactly as tall as the name.
+                    Text("Update")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 7)
+                        .frame(maxHeight: .infinity)
+                        // A capsule, the same rounding as the switches.
+                        .background(Capsule().fill(AppColors.brand))
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.vertical, 4)
-            .padding(.horizontal, 8)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isHovered ? AppColors.brand.opacity(0.1) : Color.clear)
-            )
+
+            if isActive {
+                Image(systemName: "checkmark")
+                    .font(.caption)
+                    .foregroundStyle(AppColors.brand)
+            }
         }
-        .buttonStyle(.plain)
+        // The row is as tall as its tallest ideal child, the name, and the
+        // pill fills that height.
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.vertical, 4)
+        .padding(.horizontal, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isHovered ? AppColors.brand.opacity(0.1) : Color.clear)
+        )
+        // The whole highlighted row applies the preset, checkmark and padding
+        // included, as it did when the row was one Button.
+        .contentShape(Rectangle())
+        .onTapGesture(perform: action)
+        .accessibilityAddTraits(.isButton)
         .onHover { isHovered = $0 }
     }
 }
 
 struct LaunchAtLoginToggle: View {
-    @State private var isEnabled = SMAppService.mainApp.status == .enabled
+    @State private var isEnabled = false
     @State private var isHovered = false
 
     var body: some View {
         HStack(spacing: 6) {
             Text("Open at Login")
                 .font(.caption)
-            Toggle("", isOn: $isEnabled)
+            Toggle("", isOn: Binding(get: { isEnabled }, set: { setLoginItem($0) }))
                 .toggleStyle(.switch)
                 .tint(AppColors.brand)
                 .scaleEffect(0.55)
@@ -523,17 +583,32 @@ struct LaunchAtLoginToggle: View {
         .opacity(isHovered ? 1.0 : 0.45)
         .animation(.easeInOut(duration: 0.2), value: isHovered)
         .onHover { isHovered = $0 }
-        .onChange(of: isEnabled) { newValue in
-                do {
-                    if newValue {
-                        try SMAppService.mainApp.register()
-                    } else {
-                        try SMAppService.mainApp.unregister()
-                    }
-                } catch {
-                    isEnabled = SMAppService.mainApp.status == .enabled
-                }
+        // Read here, not in the @State initializer: at this app's macOS 13
+        // target that initializer runs on every redraw of the panel, about 2 ms
+        // a call, and its result is thrown away, so the switch also never saw a
+        // change made in System Settings. Showing the panel activates the app,
+        // so this re-reads on every open.
+        .onAppear { refresh() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            refresh()
+        }
+    }
+
+    private func refresh() {
+        isEnabled = SMAppService.mainApp.status == .enabled
+    }
+
+    /// Through the binding rather than onChange, so a refresh does not
+    /// register or unregister the login item again.
+    private func setLoginItem(_ on: Bool) {
+        do {
+            if on {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
             }
+        } catch {}
+        refresh()
     }
 }
 
@@ -612,6 +687,9 @@ class AboutPanelController {
         panel.titleVisibility = .hidden
         panel.isMovableByWindowBackground = true
         panel.isReleasedWhenClosed = false
+        // NSPanel defaults to true: About hid whenever the app deactivated, then
+        // came back uninvited each time the menu bar panel activated the app.
+        panel.hidesOnDeactivate = false
         panel.center()
 
         let hostingView = NSHostingView(rootView: AboutView())
@@ -660,7 +738,10 @@ class StatusBarController: NSObject {
             NSApplication.shared.terminate(nil)
         }
 
-        let aboutAction = {
+        // The panel floats at .popUpMenu, above a normal window, so About opened
+        // underneath it. Close the panel first.
+        let aboutAction = { [weak self] in
+            self?.closePopover()
             AboutPanelController.shared.show()
         }
 
@@ -681,6 +762,11 @@ class StatusBarController: NSObject {
         } else {
             showPopover()
         }
+    }
+
+    /// Opens the panel unless it is already open.
+    func openPanel() {
+        if !panel.isShown { showPopover() }
     }
 
     private func showPopover() {

@@ -8,9 +8,10 @@
 
 ## What it is
 
-The app draws a transparent overlay on top of everything else: scanlines, screen curvature,
-vignette, flicker, RGB fringing, tape noise and jitter. The overlay is rendered in Metal at
-30fps and ignores the mouse, so you keep working underneath it.
+The app draws a transparent overlay on top of everything else: scanlines, darkened tube
+corners, vignette, flicker, RGB fringing, tape noise and jitter. The overlay is rendered in
+Metal, at 30fps while something in it moves, and ignores the mouse, so you keep working
+underneath it.
 
 Everything lives in the menu bar. There is no Dock icon and no window to manage.
 
@@ -51,21 +52,23 @@ Click the menu bar icon to open the panel.
 | Control | What it does |
 | --- | --- |
 | Header switch | Turns the overlay on and off |
-| Intensity | Master strength for every effect below |
+| Intensity | Master strength for every effect below. Saved with presets |
 | Scanlines | Horizontal line darkness |
 | Vignette | Corner falloff |
 | Flicker | Brightness wobble over time |
 | Noise | Static grain |
-| Curvature | Barrel distortion, as on a real tube |
+| Curvature | Darkens the corners and edges, the shadow of a curved tube. The image itself is not warped |
 | RGB Dark | Shadow mask darkening between phosphor stripes |
 | RGB Color | Colour separation across the stripes |
 | VHS | Tape smear and chroma bleed |
 | Static | Horizontal jump and tearing |
-| Size | Overscan, shrinking the image inside the tube |
-| Screens | One switch per display |
-| Presets | Built-in looks, plus anything you save |
+| Size | Scale of the pattern: the pitch of the scanlines, the RGB grid, the VHS bands and the static blocks |
+| Screens | One switch per display. A display the app has not seen before starts on |
+| Presets | Built-in looks, plus your own. A preset holds every slider, Intensity included. Saving under an existing name overwrites that preset. Change a slider while one of your own presets is selected and an Update button appears on its row, which saves the changes into it |
 
-Settings are written to `UserDefaults` under `crt.*` keys and survive a restart.
+Settings are written to `UserDefaults` under `crt.*` keys and survive a restart, except the header switch: the overlay always starts on.
+
+Opening the app again from Finder or Spotlight opens the panel, which is the way back to the settings if the menu bar icon is hidden.
 
 ## Build
 
@@ -123,7 +126,7 @@ zip attached. It refuses to run on a dirty working tree. Release notes come from
 
 ## Layout
 
-Six Swift files, no external dependencies.
+Seven Swift files, no external dependencies.
 
 | File | What is in it |
 | --- | --- |
@@ -169,8 +172,11 @@ No arrow and no open or close animation, because macOS 27's own menu bar panels 
 
 ## Known limits
 
-- Apple silicon only. The Makefile builds one architecture, the host's.
-- The overlay redraws at a fixed 30fps and is not frame rate aware.
+- Apple silicon only. The Makefile builds for arm64, whatever Mac it runs on.
+- While an effect moves, the overlay redraws at a fixed 30fps, not at the display's refresh rate.
+- The menu bar panel grows with its open sections and has no height cap, the same as in the
+  other Imperator apps. With both sections open and many saved presets it can run past the
+  bottom of a small display.
 - Effect parameters are global. Per-screen settings cover on and off, nothing more.
 - Not notarized, so every update needs the Gatekeeper right-click again.
 
