@@ -11,7 +11,8 @@ when you update, and choosing a built-in preset sets its own.
 
 Your own presets get an Update button. Pick one of them, change any slider, Intensity
 included, and a red Update pill appears on its row; it saves the changes into that preset.
-Saving under an existing name still overwrites it. Your own presets and the Save button now
+Saving under an existing name still overwrites it. A pencil next to each of your own presets
+opens an Edit Preset dialog that renames it. Your own presets and the Save button now
 sit at the top of the list, above the built-in looks.
 
 Fixes:

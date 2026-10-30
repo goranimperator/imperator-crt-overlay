@@ -133,6 +133,10 @@ class CRTSettingsViewModel: ObservableObject {
         CRTSettings.shared.saveCurrentAsPreset(name: name)
     }
 
+    func renamePreset(from old: String, to new: String) -> Bool {
+        CRTSettings.shared.renameUserPreset(from: old, to: new)
+    }
+
     func deletePreset(name: String) {
         CRTSettings.shared.deleteUserPreset(name: name)
     }
@@ -356,6 +360,10 @@ struct PopoverContentView: View {
                                 ) {
                                     vm.applyPreset(preset)
                                 }
+                                HoverButton(action: { showEditPresetAlert(preset.name) }) {
+                                    Image(systemName: "pencil")
+                                        .font(.caption)
+                                }
                                 HoverButton(action: { vm.deletePreset(name: preset.name) }) {
                                     Image(systemName: "trash")
                                         .font(.caption)
@@ -387,6 +395,33 @@ struct PopoverContentView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
+    }
+
+    private func showEditPresetAlert(_ current: String) {
+        let alert = NSAlert()
+        alert.messageText = "Edit Preset"
+        alert.informativeText = "Enter a new name for the preset:"
+        alert.addButton(withTitle: "Save")
+        alert.addButton(withTitle: "Cancel")
+
+        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
+        textField.stringValue = current
+        textField.placeholderString = "Preset name"
+        alert.accessoryView = textField
+        alert.window.initialFirstResponder = textField
+
+        guard let panel = NSApp.windows.first(where: { $0 is MenuBarPanel && $0.isVisible }) else { return }
+        alert.beginSheetModal(for: panel) { response in
+            guard response == .alertFirstButtonReturn else { return }
+            let name = textField.stringValue.trimmingCharacters(in: .whitespaces)
+            guard !name.isEmpty, name != current else { return }
+            if !vm.renamePreset(from: current, to: name) {
+                let warn = NSAlert()
+                warn.messageText = "Name Taken"
+                warn.informativeText = "'\(name)' is already a preset. Choose a different name."
+                warn.beginSheetModal(for: panel)
+            }
+        }
     }
 
     private func showSavePresetAlert() {

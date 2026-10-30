@@ -311,6 +311,24 @@ class CRTSettings {
         saveCurrentAsPreset(name: name)
     }
 
+    /// Renames a user preset in place, keeping its values and its position. A
+    /// built-in name is refused, and so is one another user preset already has.
+    @discardableResult
+    func renameUserPreset(from old: String, to new: String) -> Bool {
+        guard old != new,
+              !isBuiltIn(new),
+              !userPresets.contains(where: { $0.name == new }),
+              let idx = userPresets.firstIndex(where: { $0.name == old }) else { return false }
+        userPresets[idx].name = new
+        if activePresetName == old { activePresetName = new }
+        if basePresetName == old { basePresetName = new }
+        saveUserPresets()
+        save()
+        notify()
+        NotificationCenter.default.post(name: .crtPresetsChanged, object: nil)
+        return true
+    }
+
     func deleteUserPreset(name: String) {
         userPresets.removeAll { $0.name == name }
         if activePresetName == name { activePresetName = nil }
