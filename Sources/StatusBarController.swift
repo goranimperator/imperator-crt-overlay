@@ -196,6 +196,8 @@ struct PopoverContentView: View {
             }
             .padding(.vertical, 8)
             Divider()
+            UpdatesSection()
+            Divider()
             footerView
         }
         .frame(width: 340)
@@ -647,6 +649,62 @@ struct LaunchAtLoginToggle: View {
             }
         } catch {}
         refresh()
+    }
+}
+
+/// The update check: a row when a newer release is out, the switch for the
+/// daily check, and Check Now. Rigid rows only, the panel sizes to them.
+struct UpdatesSection: View {
+    @ObservedObject private var checker = UpdateChecker.shared
+    @AppStorage(UpdateChecker.enabledKey) private var checkForUpdates: Bool = true
+
+    var body: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 6) {
+                Text("Check for updates")
+                    .font(.caption)
+                Spacer()
+                Toggle("", isOn: $checkForUpdates)
+                    .toggleStyle(.switch)
+                    .tint(AppColors.brand)
+                    .scaleEffect(0.55, anchor: .trailing)
+                    .labelsHidden()
+                    .onChange(of: checkForUpdates) { on in
+                        if on { checker.checkIfDue() }
+                    }
+            }
+            HStack(spacing: 8) {
+                Text(statusText)
+                    .font(.caption)
+                    .foregroundStyle(checker.available == nil ? Color.secondary : AppColors.brand)
+                    .lineLimit(1)
+                Spacer()
+                if let update = checker.available {
+                    HoverButton(action: { UpdateChecker.open(update.page) }) {
+                        Text("Download")
+                            .font(.caption)
+                    }
+                }
+                HoverButton(action: { Task { await checker.check() } }) {
+                    Text("Check Now")
+                        .font(.caption)
+                }
+                .disabled(checker.status == .checking)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+
+    private var statusText: String {
+        let current = UpdateChecker.currentVersion
+        switch checker.status {
+        case .idle: return "Version \(current)"
+        case .checking: return "Checking..."
+        case .upToDate: return "Up to date, version \(current)"
+        case .failed: return "Could not reach GitHub"
+        case .available(let release): return "Version \(release.version) is out, you have \(current)"
+        }
     }
 }
 

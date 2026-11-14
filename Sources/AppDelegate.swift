@@ -31,6 +31,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         CRTSettings.shared.load()
         statusBarController = StatusBarController()
         setupOverlays()
+        UpdateChecker.shared.start()
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(settingsChanged),

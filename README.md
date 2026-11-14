@@ -20,6 +20,7 @@ Everything lives in the menu bar. There is no Dock icon and no window to manage.
 - Per display: turn the overlay on for one screen and leave the others alone
 - Stays put through Mission Control, Spaces and Show Desktop
 - Open at Login toggle
+- A daily check for a newer release, with a switch to turn it off
 
 Requires macOS 13 or later, Apple silicon. Built and tested on macOS 27 only, older versions
 are expected to work but have not been verified.
@@ -41,9 +42,20 @@ xattr -dr com.apple.quarantine "/Applications/Imperator CRT Overlay.app"
 
 ## Permissions
 
-None. The overlay is an ordinary borderless window that passes mouse events through, so the
-app needs no Accessibility, Screen Recording or Automation grant. Open at Login uses
-`SMAppService`, which registers the app with the system without a permission prompt.
+| Permission | When | Why |
+| --- | --- | --- |
+| Notifications | Only when a newer release is out, never at first launch | One banner per new version. Deny it and the panel still shows the update |
+
+No Accessibility, Screen Recording or Automation grant. The overlay is an ordinary borderless
+window that passes mouse events through. Open at Login uses `SMAppService`, which registers
+the app with the system without a permission prompt.
+
+## Network
+
+One request a day, the update check: a `GET` to
+`api.github.com/repos/goranimperator/imperator-crt-overlay/releases/latest`. It sends nothing
+but the app's name and version as the User-Agent GitHub requires. No telemetry, no analytics,
+nothing about you. Turn it off with **Check for updates** in the panel.
 
 ## Use
 
@@ -68,6 +80,16 @@ Click the menu bar icon to open the panel.
 
 Settings are written to `UserDefaults` under `crt.*` keys and survive a restart, except the header switch: the overlay always starts on.
 
+### Updates
+
+Once a day the app asks GitHub for the latest release and compares it with its own version.
+A newer one shows in the panel's Updates section and as one notification per version. The
+Download button and the notification open the release page, nothing more. **Check Now** runs
+even with the daily check switched off.
+
+Installing is by hand. A downloaded update meets Gatekeeper again, so run the `xattr` command
+from Install again.
+
 Opening the app again from Finder or Spotlight opens the panel, which is the way back to the settings if the menu bar icon is hidden.
 
 ## Build
@@ -89,7 +111,7 @@ macOS 13:
 
 ```
 minos 13.0
-  sdk 27.0
+  sdk 27.x
 ```
 
 Both halves matter. AppKit picks which generation of a control to draw from the `sdk` field
@@ -126,7 +148,7 @@ zip attached. It refuses to run on a dirty working tree. Release notes come from
 
 ## Layout
 
-Seven Swift files, no external dependencies.
+Eight Swift files, no external dependencies.
 
 | File | What is in it |
 | --- | --- |
@@ -136,6 +158,7 @@ Seven Swift files, no external dependencies.
 | `Sources/CRTMetalView.swift` | `MTKView` subclass that renders the effect. The Metal shader is an inline string, and its `Uniforms` struct must stay field-for-field in sync with the Swift one |
 | `Sources/CRTSettings.swift` | `CRTSettings.shared`, persistence to `UserDefaults`, presets, change notifications |
 | `Sources/StatusBarController.swift` | The whole UI: status item, panel contents, SwiftUI views, About panel |
+| `Sources/UpdateChecker.swift` | The daily GitHub release check, the one-per-version notification and the numeric version comparison |
 | `Sources/MenuBarPanel.swift` | The menu bar panel itself. A borderless `NSPanel` over `NSVisualEffectView`, so the corner radius is the app's to set. Owns click-outside, Escape and deactivation dismissal |
 
 Checks used during development live in `scripts/`. They are plain Node and take no
@@ -188,7 +211,7 @@ No arrow and no open or close animation, because macOS 27's own menu bar panels 
 
 ## Third-party
 
-None. AppKit, SwiftUI, Metal, MetalKit, QuartzCore and ServiceManagement only.
+None. AppKit, SwiftUI, Metal, MetalKit, QuartzCore, ServiceManagement and UserNotifications only.
 
 ## App details
 

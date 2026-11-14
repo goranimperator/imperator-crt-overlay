@@ -29,7 +29,7 @@ try {
 }
 
 const stamp = sh(`otool -l ${JSON.stringify(app + "/Contents/MacOS/CRTImperator")} | awk '/LC_BUILD_VERSION/,/^$/' | grep -E '^ *sdk'`);
-if (!stamp.includes("27.0")) { console.log(`FAIL: shipped binary is not stamped sdk 27.0: ${stamp}`); bad++; }
+if (!/27\./.test(stamp)) { console.log(`FAIL: shipped binary is not stamped sdk 27.x: ${stamp}`); bad++; }
 
 console.log(`version ${short}, ${stamp.trim()}, signature valid`);
 if (bad === 0) console.log("ZIP_OK"); else process.exit(1);

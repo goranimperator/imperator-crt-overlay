@@ -35,7 +35,7 @@ To install: `cp -R "build/Imperator CRT Overlay.app" /Applications/`
 
 ## Architecture
 
-Seven source files, no external dependencies:
+Eight source files, no external dependencies:
 
 - **main.swift**: app entry point. Creates NSApplication and AppDelegate by hand (no @main/@NSApplicationMain).
 - **AppDelegate.swift**: sets up the Metal device, creates one overlay window per screen, forces dark mode, sets the accent override and installs the Edit menu (key equivalents only, the app shows no menu bar). Decides per overlay whether it is shown and whether its view keeps drawing. Listens for screen and Space changes to keep overlays on top.
@@ -43,6 +43,7 @@ Seven source files, no external dependencies:
 - **CRTMetalView.swift**: MTKView subclass that renders the CRT effect, at 30fps while an effect moves and paused otherwise. The Metal shader is compiled from an inline string (not a .metal file). The `Uniforms` struct must match between Swift and the shader source.
 - **CRTSettings.swift**: singleton (`CRTSettings.shared`) holding all effect parameters. Persists to UserDefaults with `crt.*` keys. Uses `NotificationCenter` (.crtSettingsChanged, .crtPresetsChanged) to broadcast changes. Built-in and user-created presets are stored as `PresetData`.
 - **StatusBarController.swift**: the panel's contents. `AppColors`, View extensions, `CRTSettingsViewModel` (ObservableObject bridging CRTSettings), `PopoverContentView` (SwiftUI), the component structs (SettingsSlider, CustomSlider, PresetRow, LaunchAtLoginToggle, HoverButton), `AboutView`/`AboutPanelController`, and `StatusBarController` (status item and panel management).
+- **UpdateChecker.swift**: the daily update check (see Key Constraints). `UpdateChecker.shared`, an `ObservableObject` (the Observation framework needs macOS 14, the target is 13). Started from `applicationDidFinishLaunching`; `UpdatesSection` in StatusBarController shows it.
 - **MenuBarPanel.swift**: the menu bar panel itself, shared with the other Imperator menu bar apps. A borderless `NSPanel` over an `NSVisualEffectView`, so the corner radius is the app's to set. Owns click-outside, Escape and deactivation dismissal.
 
 ### Data flow
@@ -79,7 +80,7 @@ This app follows the Imperator Apps BrandBook (`github.com:goranimperator/impera
 - **No Xcode**: Build uses `swiftc` directly. Asset catalogs require `actool` (full Xcode); the Makefile has a fallback `|| true`.
 - **Shader changes**: The Metal shader is an inline string in CRTMetalView.swift. The `Uniforms` struct in Swift and the shader `struct Uniforms` must stay in sync: field order matters for Metal buffer layout. Bind it with `MemoryLayout<Uniforms>.stride`, not `size`.
 - **Ad-hoc codesigning** is mandatory (`codesign --sign - --force --deep`) or Gatekeeper blocks the app.
-- **Build stamp** must read `minos 13.0 / sdk 27.0`. Two separate flags produce it, and both
+- **Build stamp** must read `minos 13.0 / sdk 27.x (whatever SDK is installed, the gates check the 27 generation)`. Two separate flags produce it, and both
   are load-bearing. `-target arm64-apple-macos13.0` sets `minos`: without it swiftc stamps the
   minimum with the toolchain's version (measured: `minos 27.0`), which contradicts
   `LSMinimumSystemVersion 13.0` and stops the app launching below macOS 27.
@@ -121,5 +122,15 @@ This app follows the Imperator Apps BrandBook (`github.com:goranimperator/impera
 - **Hover cursor**: never change it. No `pointerStyle`, no `NSCursor.push()`/`pop()`, no
   `linkPointer()` helper. macOS does not put a hand on a control, so neither does this app.
   `scripts/check-pointer.mjs` gates this.
+- **Update checker is deliberate, keep it.** One `GET` a day to
+  `api.github.com/repos/goranimperator/imperator-crt-overlay/releases/latest` is the app's only
+  network traffic. It sends nothing but the app name and version as User-Agent. Do not widen
+  what it sends and do not remove it as unrequested network code. On by default with a switch
+  (`checkForUpdates`) and Check Now, which runs even with the switch off. The notification
+  permission is asked only when there is an update, one notification per version
+  (`notifiedUpdateVersion`). Links open only for `https://github.com`. Versions compare
+  numerically per component. Only a successful check counts toward the day
+  (`lastUpdateCheck`). Installing stays manual: the app is not notarized and Sparkle is ruled
+  out (third-party library, key per app). Needs the repo public and a `.app` bundle.
 - **LSUIElement = true**: No Dock icon. Menu bar only.
 - **Remote**: GitHub at `github.com:goranimperator/imperator-crt-overlay.git`

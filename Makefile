@@ -30,7 +30,8 @@ SWIFT_FILES = Sources/main.swift \
               Sources/CRTMetalView.swift \
               Sources/CRTSettings.swift \
               Sources/StatusBarController.swift \
-              Sources/MenuBarPanel.swift
+              Sources/MenuBarPanel.swift \
+              Sources/UpdateChecker.swift
 
 .PHONY: build run clean check-version dist release
 

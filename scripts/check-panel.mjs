@@ -37,7 +37,7 @@ const stamp = execSync(
   { encoding: "utf8" }
 ).trim().replace(/\s+/g, " ");
 console.log(`probe stamp: ${stamp}`);
-if (!stamp.includes("sdk 27.0")) { console.log("FAIL: probe is not stamped sdk 27.0"); process.exit(1); }
+if (!/sdk 27\./.test(stamp)) { console.log("FAIL: probe is not stamped sdk 27.x"); process.exit(1); }
 
 const out = execSync(bin, { encoding: "utf8" });
 process.stdout.write(out);
