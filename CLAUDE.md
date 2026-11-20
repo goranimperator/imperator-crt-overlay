@@ -69,7 +69,7 @@ This app follows the Imperator Apps BrandBook (`github.com:goranimperator/impera
   29.7x13.2. A `.frame(width: 36, height: 20)` only adds invisible padding while reading as a
   size guarantee it does not provide. `controlSize` does nothing to a switch any more.
 - **HoverButton**: opacity 0.45→1.0, `.easeInOut(duration: 0.2)`
-- **Header**: `HStack { Glyph, AppName(.headline), Spacer, Toggle }`, padding H:16 V:12. The glyph is the app's own menu bar icon, 16pt, `.renderingMode(.template)` (brandbook 9.1)
+- **Header**: `HStack { Glyph, AppName(.headline), Spacer }`, padding H:16 V:12. The on/off switch is its own row under it, as in imperator-eq: `ACTIVATE` (11pt .semibold .secondary) left, the switch right with `scaleEffect(0.55, anchor: .trailing)`, padding H:16 V:10, dividers above and below. The glyph is the app's own menu bar icon, 16pt, `.renderingMode(.template)` (brandbook 9.1)
 - **Footer**: `HStack { LaunchAtLoginToggle, Spacer, About, Quit }`, padding H:16 V:10
 - **Accordions**: `CollapsibleHeader`, as in imperator-eq: title 11pt .semibold .secondary, the active choice after it in regular, chevron.right 11pt .medium .secondary at the trailing edge, rotation 90°. They open and close without animation and hold plain rows, no `ScrollView`. Preset rows are radio rows (`ActiveDot`, 10pt name), pencil and trash on hover for the user's own, the save button right-aligned above the list
 - **Dark mode forced**: `NSApp.appearance = NSAppearance(named: .darkAqua)`

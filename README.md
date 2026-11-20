@@ -63,7 +63,7 @@ Click the menu bar icon to open the panel.
 
 | Control | What it does |
 | --- | --- |
-| Header switch | Turns the overlay on and off |
+| Activate switch | Turns the overlay on and off |
 | Intensity | Master strength for every effect below. Saved with presets |
 | Scanlines | Horizontal line darkness |
 | Vignette | Corner falloff |
@@ -78,7 +78,7 @@ Click the menu bar icon to open the panel.
 | Screens | One switch per display. A display the app has not seen before starts on |
 | Presets | Your own presets and the Save button on top, the built-in looks below them. A preset holds every slider, Intensity included. Saving under an existing name overwrites that preset. Change a slider while one of your own presets is selected and an Update button appears on its row, which saves the changes into it. A pencil on each of your own presets renames it |
 
-Settings are written to `UserDefaults` under `crt.*` keys and survive a restart, except the header switch: the overlay always starts on.
+Settings are written to `UserDefaults` under `crt.*` keys and survive a restart, except the Activate switch: the overlay always starts on.
 
 ### Updates
 

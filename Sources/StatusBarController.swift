@@ -185,6 +185,8 @@ struct PopoverContentView: View {
         VStack(spacing: 0) {
             headerView
             Divider()
+            activateRow
+            Divider()
             VStack(spacing: 0) {
                 toggleSection
                 Divider().padding(.horizontal, 16)
@@ -228,20 +230,32 @@ struct PopoverContentView: View {
             Text("Imperator CRT Overlay")
                 .font(.headline)
             Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+
+    /// The on/off switch on its own row under the header, as in imperator-eq:
+    /// ACTIVATE at the left, the switch at the right edge.
+    private var activateRow: some View {
+        HStack {
+            Text("ACTIVATE")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+            Spacer()
             Toggle("", isOn: $vm.isActive)
                 .toggleStyle(.switch)
                 .tint(AppColors.brand)
                 // Anchored trailing, not centred. `scaleEffect` shrinks what is
-                // drawn but keeps the switch's full 51pt of layout width, so a
-                // centred 0.55 scale leaves about 11pt of empty space between
-                // the switch and the padding, and the header reads as if the
-                // toggle had drifted left.
+                // drawn but keeps the switch's full layout width, so a centred
+                // 0.55 scale leaves empty space between the switch and the
+                // padding.
                 .scaleEffect(0.55, anchor: .trailing)
                 .labelsHidden()
                 .onChange(of: vm.isActive) { _ in vm.syncToSettings() }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
     }
 
     // MARK: - Intensity

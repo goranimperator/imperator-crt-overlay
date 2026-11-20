@@ -8,5 +8,7 @@ version. Turn it off with Check for updates in the panel. Check Now runs it on d
 
 The Screens and Presets sections now look like the ones in Imperator EQ: the chevron sits at the right edge, the active preset is named on the title row, and presets are radio rows with the save button above them. Pencil and trash show when you point at one of your own presets.
 
+The on/off switch moved from the header to its own Activate row under it, as in Imperator EQ.
+
 Ad-hoc signed, so Gatekeeper blocks the first launch: right-click the app and choose Open, or
 run `xattr -dr com.apple.quarantine "/Applications/Imperator CRT Overlay.app"`.
