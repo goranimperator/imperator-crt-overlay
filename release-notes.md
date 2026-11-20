@@ -6,5 +6,7 @@ app.
 It is the only network request the app makes, and it sends nothing but the app's name and
 version. Turn it off with Check for updates in the panel. Check Now runs it on demand.
 
+The Screens and Presets sections now look like the ones in Imperator EQ: the chevron sits at the right edge, the active preset is named on the title row, and presets are radio rows with the save button above them. Pencil and trash show when you point at one of your own presets.
+
 Ad-hoc signed, so Gatekeeper blocks the first launch: right-click the app and choose Open, or
 run `xattr -dr com.apple.quarantine "/Applications/Imperator CRT Overlay.app"`.

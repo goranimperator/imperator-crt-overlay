@@ -2,7 +2,9 @@
 import { execSync } from "node:child_process";
 import { existsSync, rmSync, mkdirSync } from "node:fs";
 
-const VERSION = "1.0.3";
+// The version being checked: an argument, else the one `make release` wrote to Info.plist.
+const VERSION = process.argv[2] ??
+  execSync(`/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Info.plist`, { encoding: "utf8" }).trim();
 const zip = `dist/Imperator-CRT-Overlay-${VERSION}.zip`;
 if (!existsSync(zip)) { console.log(`FAIL: ${zip} does not exist`); process.exit(1); }
 

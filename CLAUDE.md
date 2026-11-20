@@ -26,7 +26,7 @@ are plain Node and take no dependencies:
 | `node scripts/check-panel.mjs` | The panel body stays translucent over its material |
 | `node scripts/check-readme.mjs` | The README still describes the app |
 | `node scripts/check-hygiene.mjs` | Nothing local-only tracked, no absolute paths |
-| `node scripts/check-release-zip.mjs` | The release zip carries the version, a valid signature and sdk 27.0 |
+| `node scripts/check-release-zip.mjs` | The release zip carries the version, a valid signature and sdk 27.x |
 
 Commands are kept out of comment-carrying code blocks on purpose: pasted into zsh with
 interactive comments off, a trailing `# ...` turns into extra arguments.
@@ -71,7 +71,7 @@ This app follows the Imperator Apps BrandBook (`github.com:goranimperator/impera
 - **HoverButton**: opacity 0.45→1.0, `.easeInOut(duration: 0.2)`
 - **Header**: `HStack { Glyph, AppName(.headline), Spacer, Toggle }`, padding H:16 V:12. The glyph is the app's own menu bar icon, 16pt, `.renderingMode(.template)` (brandbook 9.1)
 - **Footer**: `HStack { LaunchAtLoginToggle, Spacer, About, Quit }`, padding H:16 V:10
-- **Accordions**: chevron.right 11pt .medium, rotation 90°, labels 11pt .semibold .uppercased .secondary. They open and close without animation and hold plain rows, no `ScrollView`, as imperator-eq does
+- **Accordions**: `CollapsibleHeader`, as in imperator-eq: title 11pt .semibold .secondary, the active choice after it in regular, chevron.right 11pt .medium .secondary at the trailing edge, rotation 90°. They open and close without animation and hold plain rows, no `ScrollView`. Preset rows are radio rows (`ActiveDot`, 10pt name), pencil and trash on hover for the user's own, the save button right-aligned above the list
 - **Dark mode forced**: `NSApp.appearance = NSAppearance(named: .darkAqua)`
 - **Bundle ID**: `com.goranimperator.ImperatorCRTOverlay`
 

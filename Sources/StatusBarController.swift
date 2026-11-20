@@ -262,20 +262,7 @@ struct PopoverContentView: View {
         VStack(alignment: .leading, spacing: 6) {
             // No animation, as in imperator-eq: the panel window resizes at once,
             // so animated content slid against it and the whole panel jumped.
-            Button(action: { screensExpanded.toggle() }) {
-                HStack {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.tertiary)
-                        .rotationEffect(.degrees(screensExpanded ? 90 : 0))
-                    Text("SCREENS")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                }
-                .expandTapTarget()
-            }
-            .buttonStyle(.plain)
+            CollapsibleHeader(title: "SCREENS", isExpanded: $screensExpanded)
 
             if screensExpanded {
                 ForEach(vm.screens, id: \.0) { displayID, name in
@@ -324,75 +311,49 @@ struct PopoverContentView: View {
 
     private var presetsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Button(action: { presetsExpanded.toggle() }) {
-                HStack {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.tertiary)
-                        .rotationEffect(.degrees(presetsExpanded ? 90 : 0))
-                    Text("PRESETS")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                    if let name = vm.currentPresetName {
-                        Text(name)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.tertiary)
-                    }
-                    Spacer()
-                }
-                .expandTapTarget()
-            }
-            .buttonStyle(.plain)
+            CollapsibleHeader(title: "PRESETS", detail: vm.currentPresetName, isExpanded: $presetsExpanded)
 
             if presetsExpanded {
                 // Plain rows, no ScrollView, as in imperator-eq. A ScrollView's
                 // minimum height is zero, and the panel sizes to its content's
                 // minimum, so the list opened with no height at all.
-                // The user's own presets and the save button come first, the
-                // built-in looks below the divider.
-                VStack(alignment: .leading, spacing: 0) {
-                    if !vm.userPresets.isEmpty {
-                        ForEach(vm.userPresets, id: \.name) { preset in
-                            HStack {
-                                PresetRow(
-                                    preset: preset,
-                                    isActive: vm.currentPresetName == preset.name,
-                                    onUpdate: preset.name == vm.basePresetName && vm.basePresetModified
-                                        ? { vm.updateBasePreset() } : nil
-                                ) {
-                                    vm.applyPreset(preset)
-                                }
-                                HoverButton(action: { showEditPresetAlert(preset.name) }) {
-                                    Image(systemName: "pencil")
-                                        .font(.caption)
-                                }
-                                HoverButton(action: { vm.deletePreset(name: preset.name) }) {
-                                    Image(systemName: "trash")
-                                        .font(.caption)
-                                        .foregroundStyle(.red.opacity(0.7))
-                                }
+                // The save button is right-aligned above the list, as in
+                // imperator-eq. The user's own presets come first, the
+                // built-in looks after them.
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Spacer()
+                        HoverButton(action: { showSavePresetAlert() }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 10))
+                                Text("Save current as new preset")
+                                    .font(.caption)
                             }
                         }
                     }
 
-                    HoverButton(action: { showSavePresetAlert() }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "plus.circle")
-                                .font(.caption)
-                            Text("Save Current as Preset…")
-                                .font(.caption)
+                    VStack(spacing: 4) {
+                        ForEach(vm.userPresets, id: \.name) { preset in
+                            PresetRow(
+                                preset: preset,
+                                isActive: vm.currentPresetName == preset.name,
+                                onUpdate: preset.name == vm.basePresetName && vm.basePresetModified
+                                    ? { vm.updateBasePreset() } : nil,
+                                onRename: { showEditPresetAlert(preset.name) },
+                                onDelete: { vm.deletePreset(name: preset.name) }
+                            ) {
+                                vm.applyPreset(preset)
+                            }
                         }
-                    }
-                    .padding(.top, vm.userPresets.isEmpty ? 0 : 4)
-
-                    Divider().padding(.vertical, 6)
-
-                    ForEach(CRTSettings.builtInPresets, id: \.name) { preset in
-                        PresetRow(preset: preset, isActive: vm.currentPresetName == preset.name) {
-                            vm.applyPreset(preset)
+                        ForEach(CRTSettings.builtInPresets, id: \.name) { preset in
+                            PresetRow(preset: preset, isActive: vm.currentPresetName == preset.name) {
+                                vm.applyPreset(preset)
+                            }
                         }
                     }
                 }
+                .padding(.top, 8)
             }
         }
         .padding(.horizontal, 16)
@@ -554,54 +515,115 @@ struct PresetRow: View {
     let isActive: Bool
     /// Set only on the user preset being edited, once its values have changed.
     var onUpdate: (() -> Void)? = nil
+    /// Set only on the user's own presets: the pencil and trash under the pointer.
+    var onRename: (() -> Void)? = nil
+    var onDelete: (() -> Void)? = nil
     let action: () -> Void
 
     @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: 8) {
-            Text(preset.name)
-                .font(.subheadline)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        HStack {
+            HStack(spacing: 6) {
+                ActiveDot(isActive: isActive)
+                Text(preset.name)
+                    .font(.system(size: 10, weight: isActive ? .medium : .regular))
+                    .lineLimit(1)
+            }
+
+            Spacer()
 
             if let onUpdate {
                 // Its own button inside the tappable row: a click on the pill
                 // updates the preset and does not also re-apply it.
                 Button(action: onUpdate) {
-                    // Smaller than the name so the pill, filled to the row's
-                    // height below, comes out exactly as tall as the name.
                     Text("Update")
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 7)
-                        .frame(maxHeight: .infinity)
-                        // A capsule, the same rounding as the switches.
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
                         .background(Capsule().fill(AppColors.brand))
+                        .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
             }
 
-            if isActive {
-                Image(systemName: "checkmark")
-                    .font(.caption)
-                    .foregroundStyle(AppColors.brand)
+            if isHovered, let onRename, let onDelete {
+                HStack(spacing: 8) {
+                    HoverButton(action: onRename) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 10))
+                    }
+                    HoverButton(action: onDelete) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.red.opacity(0.7))
+                    }
+                }
             }
         }
-        // The row is as tall as its tallest ideal child, the name, and the
-        // pill fills that height.
-        .fixedSize(horizontal: false, vertical: true)
-        .padding(.vertical, 4)
-        .padding(.horizontal, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(isHovered ? AppColors.brand.opacity(0.1) : Color.clear)
-        )
-        // The whole highlighted row applies the preset, checkmark and padding
-        // included, as it did when the row was one Button.
-        .contentShape(Rectangle())
-        .onTapGesture(perform: action)
+        .listRow(isHovered: $isHovered, onTap: action)
         .accessibilityAddTraits(.isButton)
-        .onHover { isHovered = $0 }
+    }
+}
+
+/// A section title that opens and closes the rows under it, as in imperator-eq:
+/// the title, the active choice after it, and the chevron at the trailing edge.
+struct CollapsibleHeader: View {
+    let title: String
+    /// Regular where the title is bold: PRESETS names the active preset.
+    var detail: String?
+    @Binding var isExpanded: Bool
+
+    var body: some View {
+        Button(action: { isExpanded.toggle() }) {
+            HStack(spacing: 8) {
+                Text(title)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                if let detail {
+                    Text(detail)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// The radio mark of a preset row: a ring with a brand red dot in it when
+/// active, an empty `.secondary` ring otherwise.
+struct ActiveDot: View {
+    let isActive: Bool
+
+    var body: some View {
+        Image(systemName: isActive ? "largecircle.fill.circle" : "circle")
+            .font(.system(size: 11))
+            .foregroundStyle(isActive ? AppColors.brand : Color.secondary)
+    }
+}
+
+extension View {
+    /// A row in a preset list: its padding, the brand wash under the pointer,
+    /// and a tap anywhere on it.
+    func listRow(isHovered: Binding<Bool>, onTap: @escaping () -> Void) -> some View {
+        padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isHovered.wrappedValue ? AppColors.brand.opacity(0.1) : Color.clear)
+            )
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onTap)
+            .onHover { isHovered.wrappedValue = $0 }
     }
 }
 
