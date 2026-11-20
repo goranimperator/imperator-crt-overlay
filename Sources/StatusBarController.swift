@@ -181,24 +181,33 @@ struct PopoverContentView: View {
     let quitAction: () -> Void
     let aboutAction: () -> Void
 
+    private static let offOpacity = 0.3
+
     var body: some View {
         VStack(spacing: 0) {
             headerView
             Divider()
             activateRow
             Divider()
+            // The panel body: with the switch off, everything between the
+            // Activate row and the footer fades as one, at imperator-eq's
+            // level. It stays usable, so a look can be set up before the
+            // overlay is turned on.
             VStack(spacing: 0) {
-                toggleSection
-                Divider().padding(.horizontal, 16)
-                slidersSection
-                Divider().padding(.horizontal, 16)
-                screensSection
-                Divider().padding(.horizontal, 16)
-                presetsSection
+                VStack(spacing: 0) {
+                    toggleSection
+                    Divider().padding(.horizontal, 16)
+                    slidersSection
+                    Divider().padding(.horizontal, 16)
+                    screensSection
+                    Divider().padding(.horizontal, 16)
+                    presetsSection
+                }
+                .padding(.vertical, 8)
+                Divider()
+                UpdatesSection()
             }
-            .padding(.vertical, 8)
-            Divider()
-            UpdatesSection()
+            .opacity(vm.isActive ? 1 : Self.offOpacity)
             Divider()
             footerView
         }

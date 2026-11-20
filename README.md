@@ -63,7 +63,7 @@ Click the menu bar icon to open the panel.
 
 | Control | What it does |
 | --- | --- |
-| Activate switch | Turns the overlay on and off |
+| Activate switch | Turns the overlay on and off. With it off the rest of the panel fades but stays usable, so you can set up a look first |
 | Intensity | Master strength for every effect below. Saved with presets |
 | Scanlines | Horizontal line darkness |
 | Vignette | Corner falloff |
